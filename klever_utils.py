@@ -8,10 +8,8 @@ class KleverAnswer():
         self.coincidences = coincidences
         self.probability = 0
 
-
     def setProbability(self, new):
         self.probability = new
-
 
 class KleverQuestion():
 
@@ -25,9 +23,15 @@ class KleverQuestion():
 
     def calculate_probability(self):
         total = self.answer1.coincidences + self.answer2.coincidences + self.answer2.coincidences
-        self.answer1.setProbability(round(self.answer1.coincidences / total * 100, 1))
-        self.answer2.setProbability(round(self.answer2.coincidences / total * 100, 1))
-        self.answer3.setProbability(round(self.answer3.coincidences / total * 100, 1))
+        try:
+            self.answer1.setProbability(round(self.answer1.coincidences / total * 100, 1))
+            self.answer2.setProbability(round(self.answer2.coincidences / total * 100, 1))
+            self.answer3.setProbability(round(self.answer3.coincidences / total * 100, 1))
+        except ZeroDivisionError:
+            self.answer1.setProbability(0)
+            self.answer2.setProbability(0)
+            self.answer3.setProbability(0)
+            self.question += " | NOT FOUND!"
 
 
 class KleverGoogler():
@@ -44,12 +48,9 @@ class KleverGoogler():
 
     def search(self):
         response = self.conn.fetch_page("https://google.ru/search?q=" + urllib.parse.quote_plus(self._question))
-        coinc1 = response.count(self._answer1)
-        coinc2 = response.count(self._answer2)
-        coinc3 = response.count(self._answer3)
-        self.answer1 = KleverAnswer(self._answer1, coinc1)
-        self.answer2 = KleverAnswer(self._answer2, coinc2)
-        self.answer3 = KleverAnswer(self._answer3, coinc3)
+        self.answer1 = KleverAnswer(self._answer1, response.count(self._answer1))
+        self.answer2 = KleverAnswer(self._answer2, response.count(self._answer2))
+        self.answer3 = KleverAnswer(self._answer3, response.count(self._answer3))
 
     def genQuestion(self):
         a = KleverQuestion(self._question, self.answer1, self.answer2, self.answer3, self.sent_time, self.id)

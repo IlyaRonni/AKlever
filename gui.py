@@ -10,13 +10,11 @@ import sys
 import time
 import urllib.request, urllib.parse
 import requests
-import googler
 from klever_utils import *
 try:
     from selenium import webdriver, common
 except ImportError:
-    print("Unsupported OS, exiting", file=sys.stderr)
-    exit(1)
+    pass
 import platform
 
 if platform.system() in ("Linux", "Darwin"):
@@ -168,12 +166,12 @@ class App(QtWidgets.QMainWindow, design.Ui_AKlever):
         self.answer1.setEnabled(True)
         self.answer2.setEnabled(True)
         self.answer3.setEnabled(True)
-        self.progressBar.setMaximum(10)
-        i = 0
-        while i < 10:
-            self.progressBar.setValue(question.sent_time + 10 - round(time.time()))
-            i+=1
-            time.sleep(1)
+        # self.progressBar.setMaximum(10)
+        # i = 0
+        # while i < 10:
+        #     self.progressBar.setValue(question.sent_time + 10 - round(time.time()))
+        #     i += 1
+        #     time.sleep(1)
 
 
 class KleverThread(QtCore.QThread):
@@ -188,10 +186,10 @@ class KleverThread(QtCore.QThread):
             response = json.loads(requests.post("https://api.vk.com/method/execute.getLastQuestion", data={"access_token": self.token, "v": "5.73", "https": 1}).text)["response"]
             if response:
                 logger.debug("got question: " + response["text"])
-                googler = KleverGoogler(response["text"], response["answers"][0]['text'], response["answers"][1]['text'],
+                google = KleverGoogler(response["text"], response["answers"][0]['text'], response["answers"][1]['text'],
                                         response["answers"][2]['text'], response["sent_time"], response["id"])
-                googler.search()
-                question = googler.genQuestion()
+                google.search()
+                question = google.genQuestion()
                 self.showQuestion(question)
             else:
                 logger.debug("No question, waiting..")
@@ -211,11 +209,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-# CLASSES TEST!!!
-# answer1 = KleverAnswer("a", 4)
-# answer2 = KleverAnswer("b", 7)
-# answer3 = KleverAnswer("c", 5)
-# question = KleverQuestion("abc", answer1, answer2, answer3)
-# question.calculate_probability()
-# question.display(self.kwindow)

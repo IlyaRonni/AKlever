@@ -5,6 +5,7 @@
 1. Install dependencies:
 ```bash
 sudo pip install selenium
+sudo pip install PyQt5
 wget https://github.com/mozilla/geckodriver/releases/download/v0.20.1/geckodriver-v0.20.1-linux64.tar.gz -qO- | sudo tar xvz -C /usr/bin
 ```
 2. Clone repo:

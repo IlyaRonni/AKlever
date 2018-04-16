@@ -1,0 +1,277 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>AKlever</class>
+ <widget class="QMainWindow" name="AKlever">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>854</width>
+    <height>306</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>AKlever</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <property name="minimumSize">
+    <size>
+     <width>849</width>
+     <height>306</height>
+    </size>
+   </property>
+   <property name="maximumSize">
+    <size>
+     <width>849</width>
+     <height>306</height>
+    </size>
+   </property>
+   <widget class="QListWidget" name="startData">
+    <property name="geometry">
+     <rect>
+      <x>0</x>
+      <y>0</y>
+      <width>271</width>
+      <height>271</height>
+     </rect>
+    </property>
+    <property name="frameShape">
+     <enum>QFrame::StyledPanel</enum>
+    </property>
+   </widget>
+   <widget class="QWidget" name="gridLayoutWidget">
+    <property name="geometry">
+     <rect>
+      <x>280</x>
+      <y>0</y>
+      <width>571</width>
+      <height>218</height>
+     </rect>
+    </property>
+    <layout class="QGridLayout" name="gridLayout">
+     <item row="1" column="0">
+      <layout class="QHBoxLayout" name="horizontalLayout_4">
+       <item>
+        <widget class="QPushButton" name="answer1">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="text">
+          <string>Answer 1</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="probab1">
+         <property name="maximumSize">
+          <size>
+           <width>64</width>
+           <height>32</height>
+          </size>
+         </property>
+         <property name="text">
+          <string>%</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item row="4" column="0">
+      <layout class="QHBoxLayout" name="horizontalLayout">
+       <item>
+        <widget class="QPushButton" name="answer3">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="text">
+          <string>Answer 3</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="probab3">
+         <property name="maximumSize">
+          <size>
+           <width>64</width>
+           <height>32</height>
+          </size>
+         </property>
+         <property name="text">
+          <string>%</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item row="2" column="0">
+      <layout class="QHBoxLayout" name="horizontalLayout_3">
+       <item>
+        <widget class="QPushButton" name="answer2">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="text">
+          <string>Answer 2</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="probab2">
+         <property name="maximumSize">
+          <size>
+           <width>64</width>
+           <height>32</height>
+          </size>
+         </property>
+         <property name="text">
+          <string>%</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item row="0" column="0">
+      <widget class="QPlainTextEdit" name="question">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>16777215</width>
+         <height>32</height>
+        </size>
+       </property>
+       <property name="cursor" stdset="0">
+        <cursorShape>WhatsThisCursor</cursorShape>
+       </property>
+       <property name="lineWrapMode">
+        <enum>QPlainTextEdit::WidgetWidth</enum>
+       </property>
+       <property name="readOnly">
+        <bool>true</bool>
+       </property>
+       <property name="plainText">
+        <string>вопрос</string>
+       </property>
+       <property name="centerOnScroll">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+   <widget class="QProgressBar" name="progressBar">
+    <property name="geometry">
+     <rect>
+      <x>0</x>
+      <y>280</y>
+      <width>851</width>
+      <height>23</height>
+     </rect>
+    </property>
+    <property name="cursor">
+     <cursorShape>WaitCursor</cursorShape>
+    </property>
+    <property name="minimum">
+     <number>0</number>
+    </property>
+    <property name="maximum">
+     <number>0</number>
+    </property>
+    <property name="value">
+     <number>-1</number>
+    </property>
+    <property name="textVisible">
+     <bool>false</bool>
+    </property>
+    <property name="invertedAppearance">
+     <bool>false</bool>
+    </property>
+    <property name="textDirection">
+     <enum>QProgressBar::TopToBottom</enum>
+    </property>
+    <property name="format">
+     <string>TIME</string>
+    </property>
+   </widget>
+   <widget class="QToolButton" name="updateButton">
+    <property name="geometry">
+     <rect>
+      <x>230</x>
+      <y>230</y>
+      <width>36</width>
+      <height>36</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>UPD</string>
+    </property>
+   </widget>
+   <widget class="QWidget" name="horizontalLayoutWidget">
+    <property name="geometry">
+     <rect>
+      <x>280</x>
+      <y>220</y>
+      <width>571</width>
+      <height>54</height>
+     </rect>
+    </property>
+    <layout class="QHBoxLayout" name="horizontalLayout_2">
+     <item>
+      <widget class="QPushButton" name="startBtn">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+       <property name="font">
+        <font>
+         <pointsize>18</pointsize>
+        </font>
+       </property>
+       <property name="text">
+        <string>START</string>
+       </property>
+       <property name="checkable">
+        <bool>false</bool>
+       </property>
+       <property name="autoDefault">
+        <bool>false</bool>
+       </property>
+       <property name="default">
+        <bool>false</bool>
+       </property>
+       <property name="flat">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="stopBtn">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+       <property name="font">
+        <font>
+         <pointsize>18</pointsize>
+        </font>
+       </property>
+       <property name="text">
+        <string>STOP</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

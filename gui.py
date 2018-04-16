@@ -204,6 +204,7 @@ def main():
     window.getToken()
     window.validateToken()
     window.getStartData()
+    window.setFixedSize(854, 306)
     window.show()
     app.exec_()
 

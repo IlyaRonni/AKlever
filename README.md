@@ -23,7 +23,7 @@ git clone https://github.com/TaizoGem/AKlever.git && cd AKlever
 2. Get login token [here](https://oauth.vk.com/authorize?client_id=6334949w&display=page&scope=friends&response_type=token&v=5.73)
 3. Put your token to `token.ak` file:
 ```bash
-// you can do it any way you want, for example:
+# you can do it any way you want, for example:
 echo "your token" > token.ak 
 ```
 4. Run gui.py:

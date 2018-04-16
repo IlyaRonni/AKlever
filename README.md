@@ -30,7 +30,7 @@ echo "your token" > token.ak
 ```bash
 python3 gui.py
 ```
-## Usage
+## Parts
  - Left list: basic information about your account and next game
  - UPD button: refresh left list
  - Start button: start bot

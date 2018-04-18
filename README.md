@@ -1,15 +1,11 @@
 # AKLEVER - VK Clever automation tool
 
 ## Installation
-1. Install dependencies:
-```bash
-wget https://github.com/mozilla/geckodriver/releases/download/v0.20.1/geckodriver-v0.20.1-linux64.tar.gz -qO- | sudo tar xvz -C /usr/bin
-```
-2. Clone repo:
+1. Clone repo:
 ```bash
 git clone https://github.com/TaizoGem/AKlever.git && cd AKlever
 ```
-3. Run cli.py:
+2. Run cli.py:
 ```bash
 python3 cli.py
 ```

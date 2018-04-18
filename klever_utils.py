@@ -14,14 +14,12 @@ class KleverAnswer():
 
 
 class KleverQuestion(object):
-    def __init__(self, question, answer1: KleverAnswer, answer2: KleverAnswer, answer3: KleverAnswer, sent_time: int, kid: int):
+    def __init__(self, question, answers: list, sent_time: int, kid: int):
         self.question = question
-        self.answers = (answer1, answer2, answer3)
+        self.answers = answers
         self.sent_time = sent_time
         self.id = kid
-        self.reverse = False
-        if "НЕ" in question:
-            self.reverse = True
+        self.reverse = "НЕ" in question
 
     def calculate_probability(self):
         total = 0
@@ -36,11 +34,14 @@ class KleverQuestion(object):
             self.question += " | NOT FOUND!"
 
 class KleverGoogler():
+    FILTERED_WORDS = ("сколько", "как много", "вошли в историю как", "какие", "как называется", "чем является",
+                      "что из этого", "какой из", "какой из героев")
+
     def __init__(self, question: str, answer1: str, answer2: str, answer3: str, sent_time: int, kid: int):
         self._question = question
-        self._answer1 = answer1
-        self._answer2 = answer2
-        self._answer3 = answer3
+        self.__question = self.optimizeQuestion(question)
+        self.answers = []
+        self._answers = [answer1, answer2, answer3]
         self.conn = googler.GoogleConnection("google.ru")
         self.sent_time = sent_time
         self.id = kid
@@ -48,12 +49,25 @@ class KleverGoogler():
 
 
     def search(self):
-        response = self.conn.fetch_page("https://www.google.ru/search?q=" + urllib.parse.quote_plus(re.sub("[\'@<!«»?]", "", self._question).lower())).lower()
-        self.answer1 = KleverAnswer(self._answer1, response.count(self._answer1.lower()))
-        self.answer2 = KleverAnswer(self._answer2, response.count(self._answer2.lower()))
-        self.answer3 = KleverAnswer(self._answer3, response.count(self._answer3.lower()))
+        response = self.conn.fetch_page("https://www.google.ru/search?q=" + urllib.parse.quote_plus(self.__question)).lower()
+        if not "и" in self.__question:
+            for answer in self._answers:
+                self.answers.append(KleverAnswer(answer, response.count(answer.lower())))
+        else:
+            for answer in self._answers:
+                sum = 0
+                for part in answer.split(" и "):
+                    sum += response.count(part.lower())
+                self.answers.append(KleverAnswer(answer, sum))
+
 
     def genQuestion(self):
-        a = KleverQuestion(self._question, self.answer1, self.answer2, self.answer3, self.sent_time, self.id)
+        a = KleverQuestion(self._question, self.answers, self.sent_time, self.id)
         a.calculate_probability()
         return a
+
+    def optimizeQuestion(self, base):
+        base = base.lower()
+        base = re.sub("[\'@<!«»?]", "", base)
+        base = re.sub("("+"|".join(self.FILTERED_WORDS)+")( |)", "", base)
+        return base

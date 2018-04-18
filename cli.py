@@ -50,7 +50,7 @@ class App(object):
             google.search()
             g = google.genQuestion()
             self.displayQuestion(g)
-        except KeyError:
+        except (KeyError, IndexError):
             print("malformed input, cancelling")
 
     def saveConfig(self):
@@ -202,7 +202,8 @@ class App(object):
         print("Answer 3:", question.answers[2].text, "|", str(question.answers[2].probability) + "%")
         print("\n==============================")
         if self.config["Config"]["debug_mode"] == "true":
-            print("Query for custom question:\n" + question.question + ":" + question.answers[0].text + "#" +
+            a = question.question[:-13] if "NOT FOUND" in question.question else question.question
+            print("Query for custom question:\n" + a + ":" + question.answers[0].text + "#" +
                   question.answers[1].text + "#" + question.answers[2].text)
         print()
 

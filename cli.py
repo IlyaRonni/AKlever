@@ -19,7 +19,7 @@ class App(object):
     GAME_STATE_STARTED = "Started"
     GAME_STATE_FINISHED = "Finished"
     ACTIONS = ("?", "h", "run", "start", "auth", "custom", "exit", "e", "settings", "config", "q")
-    _VERSION = (0.77, "18.04.18")
+    _VERSION = (0.78, "18.04.18")
 
     def __init__(self):
         super().__init__()
@@ -50,7 +50,7 @@ class App(object):
             google.search()
             g = google.genQuestion()
             self.displayQuestion(g)
-        except Exception:
+        except KeyError:
             print("malformed input, cancelling")
 
     def saveConfig(self):
@@ -197,13 +197,13 @@ class App(object):
     def displayQuestion(self, question: KleverQuestion):
         print("Question:", question.question)
         print("==============================")
-        print("\nAnswer 1:", question.answer1.text, "|", str(question.answer1.probability) + "%")
-        print("Answer 2:", question.answer2.text, "|", str(question.answer2.probability) + "%")
-        print("Answer 3:", question.answer3.text, "|", str(question.answer3.probability) + "%")
+        print("\nAnswer 1:", question.answers[0].text, "|", str(question.answers[0].probability) + "%")
+        print("Answer 2:", question.answers[1].text, "|", str(question.answers[1].probability) + "%")
+        print("Answer 3:", question.answers[2].text, "|", str(question.answers[2].probability) + "%")
         print("\n==============================")
         if self.config["Config"]["debug_mode"] == "true":
-            print("Query for custom question:\n" + question.question + ":" + question.answer1.text + "#" +
-                  question.answer2.text + "@" + question.answer3.text)
+            print("Query for custom question:\n" + question.question + ":" + question.answers[0].text + "#" +
+                  question.answers[1].text + "#" + question.answers[2].text)
         print()
 
     def mainloop(self):

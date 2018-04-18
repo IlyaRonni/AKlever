@@ -27,16 +27,8 @@ import textwrap
 import urllib.parse
 import webbrowser
 
-def sigint_handler(signum, frame):
-    print('\nInterrupted.', file=sys.stderr)
-    sys.exit(1)
-
-signal.signal(signal.SIGINT, sigint_handler)
-
 logging.basicConfig(format='[%(levelname)s] %(message)s')
 logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
-
 _VERSION_ = '3.3'
 
 # Disguise as Firefox on Ubuntu

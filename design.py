@@ -108,6 +108,9 @@ class Ui_AKlever(object):
         self.stopBtn.setFont(font)
         self.stopBtn.setObjectName("stopBtn")
         self.horizontalLayout_2.addWidget(self.stopBtn)
+        self.runCustomButton = QtWidgets.QToolButton(self.centralwidget)
+        self.runCustomButton.setGeometry(QtCore.QRect(190, 230, 36, 36))
+        self.runCustomButton.setObjectName("runCustomButton")
         AKlever.setCentralWidget(self.centralwidget)
 
         self.retranslateUi(AKlever)
@@ -127,4 +130,5 @@ class Ui_AKlever(object):
         self.updateButton.setText(_translate("AKlever", "UPD"))
         self.startBtn.setText(_translate("AKlever", "START"))
         self.stopBtn.setText(_translate("AKlever", "STOP"))
+        self.runCustomButton.setText(_translate("AKlever", "TEST"))
 

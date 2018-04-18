@@ -35,9 +35,6 @@ logging.basicConfig(format='[%(levelname)s] %(message)s')
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
-
-
-
 class App(QtWidgets.QMainWindow, design.Ui_AKlever):
     GAME_STATE_PLANNED = "Planned"
     GAME_STATE_STARTED = "Started"
@@ -55,11 +52,27 @@ class App(QtWidgets.QMainWindow, design.Ui_AKlever):
         self.state = 0
         self.current_answer = ""
         self.buf = ""
-        self.t = KleverThread(self.token)
+        self.t = KleverThread(self)
         self.updateButton.clicked.connect(self.getStartData)
         self.startBtn.clicked.connect(self.startGame)
         self.progressBar.hide()
         self.stopBtn.clicked.connect(self.threadEnd)
+        self.t.showQuestion.connect(self.displayQuestion)
+        self.runCustomButton.clicked.connect(self.runCustom)
+
+    def runCustom(self):
+        print("Input question in this format:")
+        print("questionText:answer1#answer2#answer3")
+        q = input("> ")
+        try:
+            q = q.split(":")
+            e = q[1].split("#")
+            google = KleverGoogler(q[0], e[0], e[1], e[2], 0, 0)
+            google.search()
+            g = google.genQuestion()
+            self.displayQuestion(g)
+        except Exception:
+            print("malformed input, cancelling")
 
     def getToken(self):
         try:
@@ -142,10 +155,8 @@ class App(QtWidgets.QMainWindow, design.Ui_AKlever):
         if self.state == self.GAME_STATE_STARTED:
             self.startBtn.setEnabled(True)
 
-
     def startGame(self):
-        self.t = KleverThread(self.token)
-        self.t.showQuestion.connect(self.displayQuestion)
+        self.t = KleverThread(self)
         self.t.start()
         self.startBtn.setEnabled(False)
         self.stopBtn.setEnabled(True)
@@ -154,8 +165,11 @@ class App(QtWidgets.QMainWindow, design.Ui_AKlever):
         self.t.terminate()
         self.stopBtn.setEnabled(False)
         self.startBtn.setEnabled(True)
+        logger.debug('stopped thread')
 
+    #@QtCore.pyqtSlot(KleverQuestion, name="displayQuestion")
     def displayQuestion(self, question: KleverQuestion):
+        logger.debug('displaying', question.question)
         self.question.setPlainText(question.question)
         self.answer1.setText(question.answer1.text)
         self.answer2.setText(question.answer2.text)
@@ -166,6 +180,10 @@ class App(QtWidgets.QMainWindow, design.Ui_AKlever):
         self.answer1.setEnabled(True)
         self.answer2.setEnabled(True)
         self.answer3.setEnabled(True)
+        print("Question:", question.question)
+        print("Answer 1:", question.answer1.text)
+        print("Answer 2:", question.answer2.text)
+        print("Answer 3:", question.answer3.text)
         # self.progressBar.setMaximum(10)
         # i = 0
         # while i < 10:
@@ -175,22 +193,32 @@ class App(QtWidgets.QMainWindow, design.Ui_AKlever):
 
 
 class KleverThread(QtCore.QThread):
-    showQuestion = QtCore.pyqtSignal(KleverQuestion)
+    showQuestion = QtCore.pyqtSignal(object)
 
-    def __init__(self, token):
-        QtCore.QThread.__init__(self)
-        self.token = token
+    def __init__(self, parent):
+        super(KleverThread, self).__init__(parent)
+        self.token = parent.token
 
     def run(self):
-        while True:
+        while True: # https://api.vk.com/method/execute.getLastQuestion
             response = json.loads(requests.post("https://api.vk.com/method/execute.getLastQuestion", data={"access_token": self.token, "v": "5.73", "https": 1}).text)["response"]
             if response:
                 logger.debug("got question: " + response["text"])
                 google = KleverGoogler(response["text"], response["answers"][0]['text'], response["answers"][1]['text'],
                                         response["answers"][2]['text'], response["sent_time"], response["id"])
-                google.search()
+                try:
+                    google.search()
+                except ConnectionResetError as e:
+                    print("Exception occured: errno", e.errno, file=sys.stderr)
+                    continue
                 question = google.genQuestion()
-                self.showQuestion(question)
+                time.sleep(0.01)
+                self.showQuestion.emit(question)
+                print("Question:", question.question)
+                print("Answer 1:", question.answer1.text)
+                print("Answer 2:", question.answer2.text)
+                print("Answer 3:", question.answer3.text)
+                time.sleep(10)
             else:
                 logger.debug("No question, waiting..")
                 time.sleep(1)
@@ -205,6 +233,7 @@ def main():
     window.setFixedSize(854, 306)
     window.show()
     app.exec_()
+
 
 
 if __name__ == '__main__':

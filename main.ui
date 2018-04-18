@@ -270,6 +270,19 @@
      </item>
     </layout>
    </widget>
+   <widget class="QToolButton" name="runCustomButton">
+    <property name="geometry">
+     <rect>
+      <x>190</x>
+      <y>230</y>
+      <width>36</width>
+      <height>36</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>TEST</string>
+    </property>
+   </widget>
   </widget>
  </widget>
  <resources/>

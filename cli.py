@@ -19,7 +19,7 @@ class App(object):
     GAME_STATE_STARTED = "Started"
     GAME_STATE_FINISHED = "Finished"
     ACTIONS = ("?", "h", "run", "start", "auth", "custom", "exit", "e", "settings", "config", "q", "c")
-    _VERSION = (0.79, "19.04.18")
+    _VERSION = (0.802, "19.04.18")
     logging.basicConfig(format='[%(levelname)s] %(message)s')
     logger = logging.getLogger()
     def __init__(self):
@@ -89,8 +89,7 @@ class App(object):
                   "To get token you just need to click enter, authenticate app in browser (if not already)\n"
                   "and paste url or token here\n -> If you already have a token, just press E before enter")
             while True:
-                input("[PRESS ENTER TO OPEN AUTH PAGE]")
-                if input != "e":
+                if input("[PRESS ENTER NO OPEN AUTH PAGE]") not in ("e", "E", "У", "у"):
                     try:
                         webbrowser.open("https://oauth.vk.com/authorize?client_id=6334949w&display=page&scope=friends&response_type=token&v=5.73")
                     except Exception:

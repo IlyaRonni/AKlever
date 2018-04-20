@@ -109,7 +109,7 @@ class App(object):
                         continue
                     else:
                         break
-                elif self.validateToken(token):
+                elif self.validateToken(a):
                     token = a
                     break
                 else:

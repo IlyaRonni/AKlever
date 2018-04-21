@@ -19,7 +19,7 @@ class App(object):
     GAME_STATE_STARTED = "Started"
     GAME_STATE_FINISHED = "Finished"
     ACTIONS = ("?", "h", "run", "start", "auth", "custom", "exit", "e", "settings", "config", "q", "c")
-    _VERSION = (0.802, "19.04.18")
+    _VERSION = (0.80, "21.04.18")
     logging.basicConfig(format='[%(levelname)s] %(message)s')
     logger = logging.getLogger()
     def __init__(self):
@@ -51,7 +51,7 @@ class App(object):
         try:
             q = q.split(":")
             e = q[1].split("#")
-            google = KleverGoogler(q[0], e[0], e[1], e[2], 0, 0)
+            google = KleverGoogler(q[0], e[0], e[1], e[2], 0, 0, self.config["Config"]["debug_mode"])
             google.search()
             g = google.genQuestion()
             self.displayQuestion(g)
@@ -223,7 +223,7 @@ class App(object):
                 if response:
                     self.logger.debug("got question: " + response["text"])
                     google = KleverGoogler(response["text"], response["answers"][0]['text'], response["answers"][1]['text'],
-                                            response["answers"][2]['text'], response["sent_time"], response["id"])
+                                            response["answers"][2]['text'], response["sent_time"], response["number"])
                     try:
                         google.search()
                     except ConnectionResetError as e:
@@ -252,7 +252,7 @@ class App(object):
               "settings, config - configure application")
 
     def displayQuestion(self, question: KleverQuestion):
-        print("Question:", question.question)
+        print("Question " + str(question.id) + ":", question.question)
         print("==============================\n")
         print("Answer 1:", str(question.answers[0]))
         print("Answer 2:", str(question.answers[1]))

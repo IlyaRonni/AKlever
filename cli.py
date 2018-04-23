@@ -7,6 +7,7 @@ import sys
 import time
 import urllib.request, urllib.parse
 import requests
+import requests.exceptions
 from klever_utils import *
 import social_utils
 import webbrowser
@@ -73,11 +74,11 @@ class App(object):
     def checkUpdates(self):
         try:
             v = requests.get("https://raw.githubusercontent.com/TaizoGem/AKlever/master/version").text.split("|")
-            int(v[0])
+            float(v[0])
         except:
             print("Unable to check for updates. Current version:", self.VERSION[0])
             return
-        if int(v[0]) > int(self.VERSION[0]):
+        if float(v[0]) > float(self.VERSION[0]):
             print("New version is available, would you like to auto-update?")
             if input("[Y/n] ") not in ("n", "N", "П", "п"):
                 os.system("git pull")
@@ -372,12 +373,11 @@ class App(object):
 
     def showCliHelp(self):
         self.showHelp()
-        print("""\n"+self.APP_NAME+" can also work in CLI mode! You can see list of available params in list below:
-        --only=<run|config> - only runs command passed instead of text interface
-        -h, --help          - shows this help and quits
-        --token=<token>     - overwrites token for this session (does NOT change token in config file)
-        --custom=<string>   - processes passed question in syntax q:a1#a2#a2, displays output and quits
-        """)
+        print("\n"+self.APP_NAME+" can also work in CLI mode! You can see list of available params in list below:",
+        "--only=<run|config> - only runs command passed instead of text interface",
+        "-h, --help          - shows this help and quits",
+        "--token=<token>     - overwrites token for this session (does NOT change token in config file)",
+        "--custom=<string>   - processes passed question in syntax q:a1#a2#a2, displays output and quits")
 
     def parseArgs(self, argv: list):
         for arg in argv:
@@ -433,7 +433,7 @@ class App(object):
                     try:
                         google.search()
                     except ConnectionResetError as e:
-                        print("Exception occured: errno", e.errno, file=sys.stderr)
+                        print("Exception occurred: errno", e.errno, file=sys.stderr)
                         continue
                     question = google.genQuestion()
                     self.displayQuestion(question)
@@ -444,6 +444,8 @@ class App(object):
             except (KeyboardInterrupt, SystemExit):
                 self.logger.debug("stopping")
                 return
+            except requests.exceptions.ConnectionError:
+                pass
 
     def showHelp(self):
         print("This is "+self.APP_NAME+", bot for VK Clever, quiz with money prizes by VK Team\n"

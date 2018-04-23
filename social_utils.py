@@ -37,6 +37,7 @@ class TGClient:
             out = json.loads(self.session.post("https://api.telegram.org/bot"+self.token+"/"+method, data=json.dumps(dict(args)), proxies=self.proxies, headers={'Content-type': 'application/json'}).text)
         except Exception as e:
             logging.getLogger().error("Internal error happened:", e)
+            return
         if not out["ok"]:
             logging.getLogger().error("External error happened:", out["description"])
         else:

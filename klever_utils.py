@@ -1,6 +1,5 @@
 import logging
 import requests
-import googler
 import urllib.parse
 import re
 
@@ -60,7 +59,7 @@ class KleverGoogler():
         self.__question = self.optimizeString(question)
         self.answers = []
         self._answers = [answer1, answer2, answer3]
-        self.conn = googler.GoogleConnection("google.ru")
+        self.conn = requests.Session()
         self.sent_time = sent_time
         self.number = num
         if debug_level == "disabled":
@@ -71,7 +70,7 @@ class KleverGoogler():
             self.logger.setLevel(logging.DEBUG)
 
     def fetch(self, query):
-        return self.conn.fetch_page("https://www.google.ru/search?q=" + urllib.parse.quote_plus(query)).lower()
+        return self.conn.get("https://www.google.ru/search?q=" + urllib.parse.quote_plus(query)).text.lower()
 
     def search(self):
         response = self.fetch(self.__question)

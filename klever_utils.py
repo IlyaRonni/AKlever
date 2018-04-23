@@ -1,10 +1,9 @@
 import logging
-
 import requests
-
 import googler
 import urllib.parse
 import re
+
 
 
 class KleverAnswer():
@@ -47,7 +46,8 @@ class KleverQuestion(object):
 class KleverGoogler():
     FILTERED_WORDS = ("сколько", "как много", "вошли в историю как", "какие", "как называется", "чем является",
                       "что из этого", "какой из( этих|)", "какой из героев", "традиционно", "согласно", " - ",
-                      "чем занимается", "чья профессия", "в каком году", "состоялся", "из фильма", "что из этого")
+                      "чем занимается", "чья профессия", "в каком году", "состоялся", "из фильма", "что из этого",
+                      "какой", "является", "в мире")
     OPTIMIZE_DICT = {
         "какого животного": "кого",
         "": ""
@@ -115,6 +115,7 @@ class KleverGoogler():
         base = re.sub("("+"|".join(self.FILTERED_WORDS)+")( |)", "", base)
         pattern = re.compile(r'\b(' + '|'.join(self.OPTIMIZE_DICT.keys()) + r')\b')
         base = pattern.sub(lambda x: self.OPTIMIZE_DICT[x.group()], base)
+        self.logger.info("optimized string:" + base )
         return base
 
     def getLemmas(self, base):

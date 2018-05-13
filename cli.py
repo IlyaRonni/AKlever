@@ -47,10 +47,14 @@ class App(object):
             self.config["Config"]["debug_mode"] = "disabled"
         if self.config["Config"]["updates"] not in ("off", "on"):
             self.config["Config"]["updates"] = "off"
+        if self.config["Config"]["answer_ui"] not in ("off", "on"):
+            self.config["Config"]["answer_ui"] = "off"
         if self.config["Config"]["updates"] == "on":
             self.checkUpdates()
         if self.config["Social"]["telegram"] not in ("off", "on"):
             self.config["Social"]["telegram"] = "off"
+        if self.config["Social"]["telegram_auto"] not in ("off", "on"):
+            self.config["Social"]["telegram_auto"] = "off"
         if self.config["Social"]["telegram"] == "on":
             try:
                 self.tg_client = social_utils.TGClient(self.config["Social"]["telegram_token"],
@@ -95,7 +99,7 @@ class App(object):
             google = KleverGoogler(q[0], e[0], e[1], e[2], 0, 0, self.config["Config"]["debug_mode"])
             google.search()
             g = google.genQuestion()
-            self.displayQuestion(g)
+            self.displayQuestion(g, google, True)
         except (KeyError, IndexError):
             print("malformed input, cancelling")
 
@@ -111,14 +115,16 @@ class App(object):
             print("2. VK auth token")
             print("3. Updates check:", self.config["Config"]["updates"])
             print("4. Telegram integration")
+            print("5. Answer UI:", self.config["Config"]["answer_ui"])
             print("0. Save and exit", "[EDITED]" if edited else "")
-            a = input("[0-4] > ")
-            while isInt(a) not in range(5):
+            a = input("[0-5] > ")
+            while isInt(a) not in range(6):
                 print("Invalid option")
-                a = input("[0-4] > ")
+                a = input("[0-5] > ")
             a = int(a)
             if a == 0:
                 self.saveConfig()
+                self.__init__()
                 return
             elif a == 1:
                 while True:
@@ -181,11 +187,12 @@ class App(object):
                     print("2. Bot token:", self.config["Social"]["telegram_token"][:7] + "******" + self.config["Social"]["telegram_token"][38:])
                     print("3. Channel to post: @" + self.config["Social"]["telegram_channel"])
                     print("4. Proxy: " + self.config["Social"]["telegram_proxy"])
+                    print("5. Auto send to channel:", self.config["Social"]["telegram_auto"])
                     print("0. Back")
-                    b = input("[0-4] > ")
-                    while isInt(b) not in range(5):
+                    b = input("[0-5] > ")
+                    while isInt(b) not in range(6):
                         print("Invalid input")
-                        b = input("[0-4] > ")
+                        b = input("[0-5] > ")
                     b = int(b)
                     if b == 0:
                         break
@@ -254,8 +261,44 @@ class App(object):
                                 break
                             elif c == 1:
                                 self.config["Social"]["telegram_proxy"] = input("Enter you proxy in this format: [login[:password]@]server.tld[:port]\n > ")
-                                print("Proxy saved. Do not forget to save changes and restart app")
                             edited = True
+                    elif b == 5:
+                        while True:
+                            print("Enable or disable auto answer sending")
+                            print("1.", "[x]" if self.config["Social"]["telegram_auto"] == "on" else "[ ]", "Enable")
+                            print("2.", "[x]" if self.config["Social"]["telegram_auto"] == "off" else "[ ]", "Disable")
+                            print("0. Back")
+                            c = input("[0-2] > ")
+                            while isInt(c) not in range(3):
+                                print("Invalid option")
+                                c = input("[0-2] > ")
+                            c = int(c)
+                            if c == 0:
+                                break
+                            elif c == 1:
+                                self.config["Social"]["telegram_auto"] = "on"
+                            elif c == 2:
+                                self.config["Social"]["telegram_auto"] = "off"
+                            edited = True
+            elif a == 1:
+                while True:
+                    print("Enable or disable answer UI")
+                    print("1.", "[x]" if self.config["Social"]["answer_ui"] == "on" else "[ ]", "Enable")
+                    print("2.", "[x]" if self.config["Social"]["answer_ui"] == "off" else "[ ]", "Disable")
+                    print("0. Back")
+                    c = input("[0-2] > ")
+                    while isInt(c) not in range(3):
+                        print("Invalid option")
+                        c = input("[0-2] > ")
+                    c = int(c)
+                    if c == 0:
+                        break
+                    elif c == 1:
+                        self.config["Social"]["answer_ui"] = "on"
+                    elif c == 2:
+                        self.config["Social"]["answer_ui"] = "off"
+                    edited = True
+
 
     def getTokenInfo(self):
         a = json.loads(requests.get("https://api.vk.com/method/users.get?v=5.73&access_token=" + self.token).text)["response"][0]
@@ -273,8 +316,10 @@ class App(object):
         self.config["Social"]["telegram_token"] = ""
         self.config["Social"]["telegram_channel"] = ""
         self.config["Social"]["telegram_proxy"] = ""
+        self.config["Social"]["telegram_auto"] = ""
         self.config["Config"]["debug_mode"] = "disabled"
         self.config["Config"]["updates"] = "on"
+        self.config["Config"]["answer_ui"] = "off"
         self.saveConfig()
         self.config.read("config.ak")
 
@@ -297,10 +342,10 @@ class App(object):
             while True:
                 if input("[PRESS ENTER NO OPEN AUTH PAGE]") not in ("e", "E", "У", "у"):
                     try:
-                        webbrowser.open("https://oauth.vk.com/authorize?client_id=6334949w&display=page&scope=friends&response_type=token&v=5.73")
+                        webbrowser.open("https://oauth.vk.com/authorize?client_id=6334949&display=page&scope=friends,offline&response_type=token&v=5.73")
                     except Exception:
                         print("failed to open browser, open it by yourself, please:\n"
-                              "https://oauth.vk.com/authorize?client_id=6334949w&display=page&scope=friends&response_type=token&v=5.73")
+                              "https://oauth.vk.com/authorize?client_id=6334949&display=page&scope=friends,offline&response_type=token&v=5.73")
                     time.sleep(3)
                 print("Token or url:")
                 a = input("> ")
@@ -368,8 +413,7 @@ class App(object):
                 tz=None).strftime("%H:%M") if self.state != self.GAME_STATE_STARTED else "NOW!")
         print("PRIZE:  \t\t" + str(self.prize))
         print("STATE:  \t\t" + str(self.state))
-        # END BASE DATA DISPLAY #Аудиозапись доступна только по подписке
-
+        # END BASE DATA DISPLAY #
 
     def showCliHelp(self):
         self.showHelp()
@@ -377,7 +421,7 @@ class App(object):
         "--only=<run|config> - only runs command passed instead of text interface",
         "-h, --help          - shows this help and quits",
         "--token=<token>     - overwrites token for this session (does NOT change token in config file)",
-        "--custom=<string>   - processes passed question in syntax q:a1#a2#a2, displays output and quits")
+        "--custom=<string>   - processes passed question in syntax q:a1#a2#a2, displays output and quits", sep="\n")
 
     def parseArgs(self, argv: list):
         for arg in argv:
@@ -418,13 +462,15 @@ class App(object):
                         sys.exit()
                     else:
                         pass
-                        # TODO
+                        self.configurate()
 
 
     def startGame(self):
         print("To stop press Ctrl-C")
         while True:
             try:
+                # example question https://gist.githubusercontent.com/TaizoGem/1aea44b8e5fa05550f50617673809ccb/raw/a93b1b060a595142c8ed13111a5e56f4e1afe6ee/aklever.test.json
+                # base server https://api.vk.com/method/execute.getLastQuestion
                 response = json.loads(requests.post("https://api.vk.com/method/execute.getLastQuestion", data={"access_token": self.token, "v": "5.73", "https": 1}).text)["response"]
                 if response:
                     self.logger.debug("got question: " + response["text"])
@@ -436,8 +482,7 @@ class App(object):
                         print("Exception occurred: errno", e.errno, file=sys.stderr)
                         continue
                     question = google.genQuestion()
-                    self.displayQuestion(question)
-                    time.sleep(10)
+                    self.displayQuestion(question, google)
                 else:
                     self.logger.debug("No question, waiting..")
                     time.sleep(1)
@@ -452,14 +497,14 @@ class App(object):
               "Coded by TaizoGem, source is available at:\ngithub.com/TaizoGem/AKlever\n"
               "Current version:", self.VERSION[0], "from", self.VERSION[1],
               "\n\nAvailable commands:\n"
-              "?, h             - display this menu\n"
-              "run, start       - start working\n"
-              "auth             - re-auth in application\n"
-              "custom, c        - process a custom question\n"
-              "e, exit          - exit from application\n"
-              "settings, config - configure application")
+              "?, h        - display this menu\n"
+              "run, start  - start working\n"
+              "auth        - re-auth in application\n"
+              "custom, c   - process a custom question\n"
+              "e, exit     - exit from application\n"
+              "cfg, config - configure application")
 
-    def displayQuestion(self, question: KleverQuestion):
+    def displayQuestion(self, question: KleverQuestion, googler: KleverGoogler, is_custom: bool=False):
         print("Question " + str(question.id) + ":", question.question)
         print("==============================\n")
         print("Answer 1:", str(question.answers[0]))
@@ -468,9 +513,38 @@ class App(object):
         print("\n==============================")
         if self.config["Config"]["debug_mode"] in ("basic", "verbose"):
             print("Query for custom question:\n" + str(question))
-        print()
-        if self.tg_client:
+        if self.tg_client and self.config["Social"]["telegram_auto"] == "yes":
             self.tg_client.send_question(question)
+        if self.config["Config"]["answer_ui"]:
+            while True:
+                print("0. Continue")
+                print("1. Re-google")
+                num = (0, 1)
+                if not googler.ran_reverse:
+                    num += (2,)
+                    print("2. force do reverse search")
+                if self.tg_client and not self.config["Social"]["telegram_auto"] == "yes":
+                    num += (3,)
+                    print("3. Send to @" + self.config["Social"]["telegram_channel"])
+                a = input("[0-"+str(len(num))+"] > ")
+                while isInt(a) not in num:
+                    a = input("[0-" + str(len(num)- 1) + "] > ")
+                a = int(a)
+                if a == 0:
+                    print()
+                    return
+                elif a == 1:
+                    googler.search()
+                    self.displayQuestion(googler.genQuestion(), googler)
+                    print()
+                    return
+                elif a == 2:
+                    googler.doReverse()
+                    self.displayQuestion(googler.genQuestion(), googler)
+                    print()
+                    return
+                elif a == 3:
+                    self.tg_client.send_question(question)
 
     def mainloop(self):
         while True:
@@ -487,7 +561,7 @@ class App(object):
                     sys.exit()
                 elif action in ("custom", "c"):
                     self.runCustom()
-                elif action in ("settings", "config"):
+                elif action in ("cfg", "config"):
                     self.configurate()
 
             except (KeyboardInterrupt, EOFError):

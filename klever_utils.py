@@ -24,7 +24,7 @@ class KleverQuestion(object):
         self.answers = answers
         self.sent_time = sent_time
         self.id = kid
-        self.reverse = " НЕ" in question or "НЕ " in question or " НЕ " in question
+        self.reverse = " не " in question.lower()
 
     def __str__(self):
         return self.question + ":" + self.answers[0].text + "#" + self.answers[1].text + "#" + self.answers[2].text
@@ -40,6 +40,16 @@ class KleverQuestion(object):
                 answer.setProbability(round(answer.coincidences / total * 100, 1))
         if total == 0:
             self.question += " | NOT FOUND!"
+            self.best = KleverAnswer("???", 0)
+        else:
+            a = min(self.answers[a].coincidences for a in range(3)) if self.reverse else \
+                max(self.answers[a].coincidences for a in range(3))
+            i = 0
+            for answer in self.answers:
+                i += 1
+                if answer.coincidences == a:
+                    self.best = str(i) + ". " + answer.text
+
 
 
 class KleverGoogler():
@@ -62,6 +72,7 @@ class KleverGoogler():
         self.conn = requests.Session()
         self.sent_time = sent_time
         self.number = num
+        self.ran_reverse = False
         if debug_level == "disabled":
             self.logger.setLevel(logging.CRITICAL)
         elif debug_level == "basic":
@@ -70,13 +81,17 @@ class KleverGoogler():
             self.logger.setLevel(logging.DEBUG)
 
     def fetch(self, query):
-        return self.conn.get("https://www.google.ru/search?q=" + urllib.parse.quote_plus(query)).text.lower()
+        try:
+            return self.conn.get("https://www.google.ru/search?q=" + urllib.parse.quote_plus(query)).text.lower() + \
+                   self.conn.get("https://www.yandex.ru/search/?text=" + urllib.parse.quote_plus(query)).text.lower()
+        except Exception as e:
+            self.logger.error("Exception occurred while trying to search:" + str(e))
 
     def search(self):
         response = self.fetch(self.__question)
         total = 0
         if " и " in self.__question:
-            self.logger.info("found multipart answer")
+            self.logger.info("found multipart question")
             for answer in self._answers:
                 sumd = 0
                 for part in answer.split(" и "):
@@ -87,21 +102,34 @@ class KleverGoogler():
         else:
             self.logger.info("usual question, processing..")
             for answer in self._answers:
-                total += response.count(answer.lower())
-                self.logger.debug("processed " + answer + ", found " + str(total) + " occs in total")
-                self.answers.append(KleverAnswer(answer, len(re.findall("(:|-|!|.|,|\?|;|\"|'|`| )" + answer.lower()
-                                                                        + "(:|-|!|.|,|\?|;|\"|'|`| )", response))))
-        if total == 0:
-            # reverse search
-            self.logger.info("not found anything, trying reverse search..")
-            self.answers = []
-            for answer in self._answers:
-                rsp = self.fetch(self.optimizeString(answer))
-                sumd = 0
-                for word in self.getLemmas(self.__question):
-                    sumd += len(re.findall("(:|-|!|.|,|\?|;|\"|'|`| )" + word.lower() + "(:|-|!|.|,|\?|;|\"|'|`| )", rsp))
-                    self.logger.debug("processed " + word + ", found " + str(sumd) + " occs in total")
-                self.answers.append(KleverAnswer(answer, sumd))
+                for part in answer.split(" "):
+                    total += response.count(answer.lower())
+                    self.logger.debug("processed " + answer + ", found " + str(total) + " occs in total")
+                    self.answers.append(KleverAnswer(answer, len(re.findall("(:|-|!|.|,|\?|;|\"|'|`| )" + answer.lower()
+                                                                            + "(:|-|!|.|,|\?|;|\"|'|`| )", response))))
+        if self.answers[0].coincidences == self.answers[1].coincidences == self.answers[2].coincidences:
+            self.doReverse()
+
+
+
+    def doReverse(self):
+        self.logger.info("doing reverse search..")
+        prev_results = (
+            self.answers[0].coincidences,
+            self.answers[1].coincidences,
+            self.answers[2].coincidences
+        )
+        self.answers = []
+        i = 0
+        for answer in self._answers:
+            rsp = self.fetch(self.optimizeString(answer))
+            sumd = 0
+            for word in self.getLemmas(self.__question):
+                sumd += len(re.findall("(:|-|!|.|,|\?|;|\"|'|`| )" + word.lower() + "(:|-|!|.|,|\?|;|\"|'|`| )", rsp))
+                self.logger.debug("processed " + word + ", found " + str(sumd) + " occs in total")
+            self.answers.append(KleverAnswer(answer, prev_results[i] + sumd))
+            i += 1
+        self.ran_reverse = True
 
     def genQuestion(self):
         a = KleverQuestion(self._question, self.answers, self.sent_time, self.number)

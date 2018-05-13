@@ -6,7 +6,7 @@ BY TAIZOGEM
 """
 import json
 import logging
-
+import requests
 import klever_utils
 import cli
 
@@ -16,7 +16,7 @@ class TGClient:
         self.token = token
         self.channel_name = channel_name
         self.proxies = {"http": "socks5h://" + proxy, "https": "socks5h://" + proxy} if proxy else {}
-        self.session = klever_utils.requests.Session()
+        self.session = requests.Session()
 
     def validate_token(self, token):
         if "error happened" in self.doRequest("getMe"):

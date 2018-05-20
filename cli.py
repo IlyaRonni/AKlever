@@ -27,7 +27,7 @@ class App(object):
     GAME_STATE_FINISHED = "Finished"
     ACTIONS = ("?", "h", "run", "start", "auth", "custom", "exit", "e", "settings", "config", "q", "c")
     APP_NAME = "AKlever"  # if you want you can change name of bot here - it will change everywhere
-    with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "version")) as file:
+    with open("version") as file:
         VERSION = file.read().split("|")
 
     logging.basicConfig(format='[%(levelname)s] %(message)s')
@@ -280,7 +280,7 @@ class App(object):
                             elif c == 2:
                                 self.config["Social"]["telegram_auto"] = "off"
                             edited = True
-            elif a == 1:
+            elif a == 5:
                 while True:
                     print("Enable or disable answer UI")
                     print("1.", "[x]" if self.config["Social"]["answer_ui"] == "on" else "[ ]", "Enable")
@@ -385,7 +385,7 @@ class App(object):
 
     def getStartData(self):
         response = json.loads(requests.post("https://api.vk.com/method/execute.getStartData",
-                                            data={"build_ver": 3078, "need_leaderboard": 0, "func_v": 2,
+                                            data={"build_ver": 3078, "need_leaderboard": 0, "func_v": -1,
                                                   "access_token": self.token, "v": "5.73", "lang": "ru",
                                                   "https": 1}).text)["response"]
         try:
@@ -515,7 +515,7 @@ class App(object):
             print("Query for custom question:\n" + str(question))
         if self.tg_client and self.config["Social"]["telegram_auto"] == "yes":
             self.tg_client.send_question(question)
-        if self.config["Config"]["answer_ui"]:
+        if self.config["Config"]["answer_ui"] == "yes":
             while True:
                 print("0. Continue")
                 print("1. Re-google")

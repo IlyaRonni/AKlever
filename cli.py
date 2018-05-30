@@ -422,9 +422,9 @@ class App(object):
             self.game_start = 0
         self.balance = response["game_info"]["user"]["balance"]
         self.lives = response["game_info"]["user"]["extra_lives"]
-        self.coins = response["game_info"]["user"]["coins"]
         self.rating = response["game_info"]["rating_percent"]
         self.prize = response["game_info"]["game"]["prize"]
+        self.coins = response["game_info"]["user"]["coins"]
         a = response["game_info"]["game"]["status"]
         if a == "planned":
             self.state = self.GAME_STATE_PLANNED
@@ -445,13 +445,13 @@ class App(object):
         print("======={ YOUR STATS }=======")
         print("BALANCE (RUB):  " + str(self.balance))
         print("EXTRA LIVES:  \t" + str(self.lives))
-        print("CLEVERS:  \t" + str(self.coins))
+        print("COINS: \t\t" + str(self.coins))
         print("RATING (%):  \t" + str(self.rating))
         print("======={ GAME  INFO }=======")
-        print("NEXT GAME:  \t", datetime.utcfromtimestamp(self.game_start).replace(tzinfo=timezone.utc).astimezone(
-                tz=None).strftime("%H:%M %D") if self.state != self.GAME_STATE_STARTED else "NOW!") #Fix in future :3
-        print("PRIZE (RUB):  \t" + str(self.prize))
-        print("STATE:  \t" + str(self.state))
+        print("NEXT GAME:     ", datetime.utcfromtimestamp(self.game_start).replace(tzinfo=timezone.utc).astimezone(
+                tz=None).strftime("%H:%M") if self.state != self.GAME_STATE_STARTED else "NOW!")
+        print("PRIZE (RUB):  \t\t" + str(self.prize))
+        print("STATE:  \t\t" + str(self.state))
         # END BASE DATA DISPLAY #
 
     def showCliHelp(self):
@@ -548,8 +548,7 @@ class App(object):
         print("Question " + str(question.id) + ":", question.question)
         print("==============================\n")
         for i in range(3):
-            print("Answer "+str(i+1)+":", str(question.answers[i]))
-        print("Answer for question " + str(question.id) + ": " + question.best)
+            print(("[~]" if i == int(question.best[0])-1 else "[ ]"), "Answer "+str(i+1)+":", str(question.answers[i]))
         print("\n==============================")
         if self.config["Config"]["debug_mode"] in ("basic", "verbose"):
             print("Query for custom question:\n" + str(question))

@@ -25,6 +25,7 @@ class KleverQuestion(object):
         self.sent_time = sent_time
         self.id = kid
         self.reverse = " не " in question.lower()
+        self.best = "NOT FOUND!"
 
     def __str__(self):
         return self.question + ":" + self.answers[0].text + "#" + self.answers[1].text + "#" + self.answers[2].text
@@ -40,7 +41,6 @@ class KleverQuestion(object):
                 answer.setProbability(round(answer.coincidences / total * 100, 1))
         if total == 0:
             self.question += " | NOT FOUND!"
-            self.best = KleverAnswer("???", 0)
         else:
             a = min(self.answers[a].coincidences for a in range(3)) if self.reverse else \
                 max(self.answers[a].coincidences for a in range(3))
@@ -48,7 +48,7 @@ class KleverQuestion(object):
             for answer in self.answers:
                 i += 1
                 if answer.coincidences == a:
-                    self.best = str(i) + ". " + answer.text
+                    self.best =  answer.text + " ("+str(i) + ") "
 
 
 class KleverGoogler():
@@ -119,6 +119,7 @@ class KleverGoogler():
         self.__question = self.optimizeString(question)
         self.answers = []
         self._answers = [answer1, answer2, answer3]
+        self.newquestion = self.__question+'("'+answer1+'" | "'+answer2+'" | "'+answer3+'")'
         self.conn = requests.Session()
         self.sent_time = sent_time
         self.number = num
@@ -130,23 +131,26 @@ class KleverGoogler():
         elif debug_level == "verbose":
             self.logger.setLevel(logging.DEBUG)
 
-    def fetch(self, query):
+    def fetch(self, query, newquery):
         try:
             google = self.conn.get("https://www.google.ru/search?q=" + urllib.parse.quote_plus(query)).text.lower()
-            yandex = self.conn.get("https://www.yandex.ru/search/?text=" + urllib.parse.quote_plus(query)).text.lower()
+            yandex = self.conn.get("https://www.yandex.ru/search/?text=" + urllib.parse.quote_plus(query)).text.lower() 
+            newyandex = self.conn.get("https://www.yandex.ru/search/?text=" + urllib.parse.quote_plus(newquery)).text.lower() #Question ("Ans1" | "Ans2" | "Ans3") (Ported from apihot.ru) 
             out = ""
             if not "Our systems have detected unusual traffic from your computer network" in google\
                     and not "support.google.com/websearch/answer/86640" in google:
                 out += google
             if not "{\"captchaSound\"" in yandex:
                 out += yandex
+            if not "{\"captchaSound\"" in newyandex:
+                out += newyandex
             return out
         except Exception as e:
             self.logger.error("Exception occurred while trying to search:" + str(e))
             return ""
 
     def search(self):
-        response = self.fetch(self.__question)
+        response = self.fetch(self.__question, self.newquestion)
         if all(" и " in s for s in self._answers):  # если И есть в каждом ответе...
             self.logger.info("found multipart question")
             for answer in self._answers:
@@ -175,7 +179,7 @@ class KleverGoogler():
         self.answers = []
         i = 0
         for answer in self._answers:
-            rsp = self.fetch(self.optimizeString(answer))
+            rsp = self.fetch(self.optimizeString(answer),"")
             sumd = 0
             for word in self.getLemmas(self.__question):
                 sumd += len(re.findall("(:|-|!|.|,|\?|;|\"|'|`| )" + word.lower() + "(:|-|!|.|,|\?|;|\"|'|`| )", rsp))

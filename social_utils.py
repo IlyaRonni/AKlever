@@ -12,7 +12,7 @@ import cli
 
 
 class TGClient:
-    def __init__(self, token, channel_name, proxy="apihot:apihot@proxy.apihot.ru:7777"):
+    def __init__(self, token, channel_name, proxy=""):
         self.token = token
         self.channel_name = channel_name
         self.proxies = {"http": "socks5h://" + proxy, "https": "socks5h://" + proxy} if proxy else {}
@@ -22,15 +22,6 @@ class TGClient:
         if "error happened" in self.doRequest("getMe"):
             return False
         return True
-
-    def send_question(self, question: klever_utils.KleverQuestion):
-        message = "Вопрос " + str(question.id) + ": " + question.question
-        message += "\n==============================\n\nОтвет 1: "
-        message += str(question.answers[0])
-        message += "\nОтвет 2: " + str(question.answers[1])
-        message += "\nОтвет 3: " + str(question.answers[2])
-        message += "\n\n==============================\n"+cli.App.APP_NAME+" v" + cli.App.VERSION[0]
-        self.doRequest("sendMessage", chat_id='@' + self.channel_name, text=message)
 
     def doRequest(self, method: str, **args):
         try:
@@ -43,3 +34,12 @@ class TGClient:
         else:
             logging.getLogger().info("Made request " + method)
             return out["result"]
+
+    def send_question(self, question: klever_utils.KleverQuestion):
+        message = "Вопрос " + str(question.id) + ": " + question.question
+        message += "\n==============================\n\nОтвет 1: "
+        message += str(question.answers[0])
+        message += "\nОтвет 2: " + str(question.answers[1])
+        message += "\nОтвет 3: " + str(question.answers[2])
+        message += "\n\n==============================\n"+cli.App.APP_NAME+" v" + cli.App.VERSION[0]
+        self.doRequest("sendMessage", chat_id='@' + self.channel_name, text=message)

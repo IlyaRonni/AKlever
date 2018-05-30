@@ -25,7 +25,7 @@ class App(object):
     GAME_STATE_PLANNED = "Planned"
     GAME_STATE_STARTED = "Started"
     GAME_STATE_FINISHED = "Finished"
-    ACTIONS = ("?", "h", "run", "start", "auth", "custom", "exit", "e", "settings", "config", "q", "c")
+    ACTIONS = ("?", "h", "run", "start", "auth", "custom", "exit", "e", "settings", "config", "q", "c", "vidinfo", "r")
     APP_NAME = "AKlever"  # if you want you can change name of bot here - it will change everywhere
     with open("version") as file:
         VERSION = file.read().split("|")
@@ -39,6 +39,8 @@ class App(object):
         self.config = configparser.ConfigParser()
         self.initConfig()
         self.logfile = ""
+        self.vid = ""
+        self.longPollServer = ""
         if self.config["Config"]["debug_mode"] == "verbose":
             self.logger.setLevel(logging.DEBUG)
         elif self.config["Config"]["debug_mode"] == "basic":
@@ -76,6 +78,7 @@ class App(object):
         self.buf = ""
 
     def checkUpdates(self):
+        print("Checking for updates...", end="\r")
         try:
             v = requests.get("https://raw.githubusercontent.com/TaizoGem/AKlever/master/version").text.split("|")
             float(v[0])
@@ -116,11 +119,12 @@ class App(object):
             print("3. Updates check:", self.config["Config"]["updates"])
             print("4. Telegram integration")
             print("5. Answer UI:", self.config["Config"]["answer_ui"])
+            print("6. Communication method:", self.config["Config"]["api_type"])
             print("0. Save and exit", "[EDITED]" if edited else "")
-            a = input("[0-5] > ")
-            while isInt(a) not in range(6):
+            a = input("[0-6] > ")
+            while isInt(a) not in range(7):
                 print("Invalid option")
-                a = input("[0-5] > ")
+                a = input("[0-6] > ")
             a = int(a)
             if a == 0:
                 self.saveConfig()
@@ -298,6 +302,27 @@ class App(object):
                     elif c == 2:
                         self.config["Social"]["answer_ui"] = "off"
                     edited = True
+            elif a == 6:
+                while True:
+                    print("1. More info")
+                    print("2.", "[x]" if self.config["Config"]["api_type"] == "longpoll" else "[ ]", "Longpoll")
+                    print("3.", "[x]" if self.config["Config"]["api_type"] == "requests" else "[ ]", "Requests")
+                    print("0. Back")
+                    c = input("[0-3] > ")
+                    while isInt(c) not in range(4):
+                        print("Invalid option")
+                        c = input("[0-3] > ")
+                    c = int(c)
+                    if c == 0:
+                        break
+                    elif c == 1:
+                        webbrowser.open("https://github.com/TaizoGem/AKlever/wiki/Communication-types")
+                        continue
+                    elif c == 2:
+                        self.config["Config"]["api_type"] = "longpoll"
+                    elif c == 3:
+                        self.config["Social"]["api_type"] = "requests"
+                    edited = True
 
 
     def getTokenInfo(self):
@@ -324,6 +349,7 @@ class App(object):
         self.config.read("config.ak")
 
     def getToken(self, force=False):
+        print("Getting token...", end="\r")
         if self.token and not force:
             return
         try:
@@ -342,10 +368,10 @@ class App(object):
             while True:
                 if input("[PRESS ENTER NO OPEN AUTH PAGE]") not in ("e", "E", "У", "у"):
                     try:
-                        webbrowser.open("https://oauth.vk.com/authorize?client_id=6334949&display=page&scope=friends,offline&response_type=token&v=5.73")
+                        webbrowser.open("https://oauth.vk.com/authorize?client_id=6334949&display=page&scope=friends,offline,video&response_type=token&v=5.73")
                     except Exception:
                         print("failed to open browser, open it by yourself, please:\n"
-                              "https://oauth.vk.com/authorize?client_id=6334949&display=page&scope=friends,offline&response_type=token&v=5.73")
+                              "https://oauth.vk.com/authorize?client_id=6334949&display=page&scope=friends,offline,video&response_type=token&v=5.73")
                     time.sleep(3)
                 print("Token or url:")
                 a = input("> ")
@@ -384,6 +410,7 @@ class App(object):
             return False
 
     def getStartData(self):
+        print("Getting data...", end="\r")
         response = json.loads(requests.post("https://api.vk.com/method/execute.getStartData",
                                             data={"build_ver": 3078, "need_leaderboard": 0, "func_v": -1,
                                                   "access_token": self.token, "v": "5.73", "lang": "ru",
@@ -401,6 +428,15 @@ class App(object):
             self.state = self.GAME_STATE_PLANNED
         elif a == "started":
             self.state = self.GAME_STATE_STARTED
+            self.vid = str(response["game_info"]["game"]["video_owner_id"]) + "_" + str(response["game_info"]["game"]["video_id"])
+            self.longPollServer = requests.post("https://api.vk.com/method/video.getLongPollServer", data={
+                "video_id": response["game_info"]["game"]["video_id"],
+                "owner_id": response["game_info"]["game"]["video_owner_id"],
+                "access_token": self.token,
+                "v": 5.73,
+                "lang": "ru",
+                "https": 1
+            }).json()["response"]["url"]
         elif a == "finished":
             self.state = self.GAME_STATE_FINISHED
         # BASE DATA DISPLAY #
@@ -470,7 +506,7 @@ class App(object):
         while True:
             try:
                 # example question https://gist.githubusercontent.com/TaizoGem/1aea44b8e5fa05550f50617673809ccb/raw/a93b1b060a595142c8ed13111a5e56f4e1afe6ee/aklever.test.json
-                # base server https://api.vk.com/method/execute.getLastQuestion
+                    # base server https://api.vk.com/method/execute.getLastQuestion
                 response = json.loads(requests.post("https://api.vk.com/method/execute.getLastQuestion", data={"access_token": self.token, "v": "5.73", "https": 1}).text)["response"]
                 if response:
                     self.logger.debug("got question: " + response["text"])
@@ -502,14 +538,14 @@ class App(object):
               "auth        - re-auth in application\n"
               "custom, c   - process a custom question\n"
               "e, exit     - exit from application\n"
+              "vidinfo     - information about current video\n"
               "cfg, config - configure application")
 
     def displayQuestion(self, question: KleverQuestion, googler: KleverGoogler, is_custom: bool=False):
         print("Question " + str(question.id) + ":", question.question)
         print("==============================\n")
-        print("Answer 1:", str(question.answers[0]))
-        print("Answer 2:", str(question.answers[1]))
-        print("Answer 3:", str(question.answers[2]))
+        for i in range(3):
+            print("Answer "+str(i+1)+":", str(question.answers[i]))
         print("\n==============================")
         if self.config["Config"]["debug_mode"] in ("basic", "verbose"):
             print("Query for custom question:\n" + str(question))
@@ -526,9 +562,9 @@ class App(object):
                 if self.tg_client and not self.config["Social"]["telegram_auto"] == "yes":
                     num += (3,)
                     print("3. Send to @" + self.config["Social"]["telegram_channel"])
-                a = input("[0-"+str(len(num))+"] > ")
+                a = input(" > ")
                 while isInt(a) not in num:
-                    a = input("[0-" + str(len(num)- 1) + "] > ")
+                    a = input(" > ")
                 a = int(a)
                 if a == 0:
                     print()
@@ -545,6 +581,8 @@ class App(object):
                     return
                 elif a == 3:
                     self.tg_client.send_question(question)
+        elif not is_custom:
+            time.sleep(10)
 
     def mainloop(self):
         while True:
@@ -563,6 +601,17 @@ class App(object):
                     self.runCustom()
                 elif action in ("cfg", "config"):
                     self.configurate()
+                elif action == "vidinfo":
+                    if self.state == self.GAME_STATE_STARTED:
+                        print("Current video:")
+                        print("https://vk.com/video" + self.vid)
+                        print("Longpoll server:")
+                        print(self.longPollServer)
+                    else:
+                        print("Game is not running now, nothing to display!")
+                elif action == "r":
+                    self.__init__()
+                    self.getStartData()
 
             except (KeyboardInterrupt, EOFError):
                 if self.config["Config"]["debug_mode"] == "disabled":

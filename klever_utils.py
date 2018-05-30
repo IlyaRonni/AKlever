@@ -51,15 +51,65 @@ class KleverQuestion(object):
                     self.best = str(i) + ". " + answer.text
 
 
-
 class KleverGoogler():
     FILTERED_WORDS = ("сколько", "как много", "вошли в историю как", "какие", "как называется", "чем является",
-                      "что из этого", "какой из( этих|)", "какой из героев", "традиционно", "согласно", " - ",
-                      "чем занимается", "чья профессия", "в каком году", "состоялся", "из фильма", "что из этого",
-                      "какой", "является", "в мире")
+                      "что из этого", "(у |)как(ой|ого|их) из( этих|)", "какой из героев", "традиционно", "согласно", " - ",
+                      "чем занимается", "чья профессия", "в (как|эт)ом году", "состоялся", "из фильма", "что из этого",
+                      "какой", "является", "в мире", "и к", "термин(ов|ы|)", "относ(и|я)тся", "в какой",
+                      "у как(ого|ой|их)", "согласно", "на каком")
     OPTIMIZE_DICT = {
-        "какого животного": "кого",
-        "": ""
+        "какого животного": "кого", ###############################
+        "один": "1",                ###############################
+        "одна": "1",                ###############################
+        "одно": "1",                ####        #######        ####
+        "два": "2",                 ####        #######        ####
+        "двое": "2",                ####        #######        ####
+        "две": "2",                 ####        #######        ####
+        "три": "3",                 ###############################
+        "трое": "3",                ##############   ##############
+        "четыре": "4",              ##############   ##############
+        "четверо": "4",             ##############   ##############
+        "пять": "5",                ###############################
+        "пятеро": "5",              ########               ########
+        "шесть": "6",               ########               ########
+        "шестеро": "6",             ####    ###############   #####
+        "семь": "7",                ####    ###############   #####
+        "семеро": "7",              ###############################
+        "восемь": "8",              ###############################
+        "девять": "9",              #####                     #####
+        "десять": "10",             #####                     #####
+        "одиннадцать": "11",        #############     #############
+        "двенадцать": "12",         #############     #############
+        "тринадцать": "13",         #############     #############
+        "четырнадцать": "14",       #############     #############
+        "пятнадцать": "15",         #############     #############
+        "шестнадцать": "16",        #############     #############
+        "семнадцать": "17",         #############     #############
+        "восемнадцать": "18",       #############     #############
+        "девятнадцать": "19",       ###############################
+        "двадцать": "20",           ###############################
+        "тридцать": "30",           ###############################
+        "сорок": "40",              ####         #####         ####
+        "пятьдесят": "50",          ####  ############  ###########
+        "шестьдесят": "60",         ####  ############  ###########
+        "семьдесят": "70",          ####  #####  #####  #####  ####
+        "восемьдесят": "80",        ####  ###### #####  ###### ####
+        "девяносто": "90",          ####  ###### #####  ###### ####
+        "сто": "100",               ####         #####         ####
+        "двести": "200",            ###############################
+        "триста": "300",            ###############################
+        "четыреста": "400",         ###############################
+        "пятьсот": "500",           ###############################
+        "шестьсот": "600",          ###############################
+        "семьсот": "700",           ###############################
+        "восемьсот": "800",         ######                   ######
+        "девятсот": "900",          ######  if you use this  ######
+        "тысача": "1000",           ######    please leave   ######
+        " тысячи": "000",           ######  copyright notice ######
+        " тысяч": "000",            ######                   ######
+        "миллион": "1000000",       ######   (c) TaizoGem    ######
+        " миллиона": "000000",      ###############################
+        " миллионов": "000000"      ###############################
     }
     logging.basicConfig(format='[%(levelname)s] %(message)s')
     logger = logging.getLogger()
@@ -82,43 +132,46 @@ class KleverGoogler():
 
     def fetch(self, query):
         try:
-            return self.conn.get("https://www.google.ru/search?q=" + urllib.parse.quote_plus(query)).text.lower() + \
-                   self.conn.get("https://www.yandex.ru/search/?text=" + urllib.parse.quote_plus(query)).text.lower()
+            google = self.conn.get("https://www.google.ru/search?q=" + urllib.parse.quote_plus(query)).text.lower()
+            yandex = self.conn.get("https://www.yandex.ru/search/?text=" + urllib.parse.quote_plus(query)).text.lower()
+            out = ""
+            if not "Our systems have detected unusual traffic from your computer network" in google\
+                    and not "support.google.com/websearch/answer/86640" in google:
+                out += google
+            if not "{\"captchaSound\"" in yandex:
+                out += yandex
+            return out
         except Exception as e:
             self.logger.error("Exception occurred while trying to search:" + str(e))
+            return ""
 
     def search(self):
         response = self.fetch(self.__question)
-        total = 0
-        if " и " in self.__question:
+        if all(" и " in s for s in self._answers):  # если И есть в каждом ответе...
             self.logger.info("found multipart question")
             for answer in self._answers:
-                sumd = 0
+                current_count = 0
                 for part in answer.split(" и "):
-                    sumd += len(re.findall("(:|-|!|.|,|\?|;|\"|'|`| )" + part.lower() + "(:|-|!|.|,|\?|;|\"|'|`| )", response))
-                    self.logger.debug("processed " + part + ", found " + str(sumd) + " occs in total")
-                self.answers.append(KleverAnswer(answer, sumd))
-                total += sumd
+                    current_count += len(re.findall("(:|-|!|.|,|\?|;|\"|'|`| )" + part.lower() + "(:|-|!|.|,|\?|;|\"|'|`| )", response))
+                    self.logger.debug("processed " + part + ", found " + str(current_count) + " occs in total")
+                self.answers.append(KleverAnswer(answer, current_count))
         else:
             self.logger.info("usual question, processing..")
             for answer in self._answers:
+                current_count = 0
                 for part in answer.split(" "):
-                    total += response.count(answer.lower())
-                    self.logger.debug("processed " + answer + ", found " + str(total) + " occs in total")
-                    self.answers.append(KleverAnswer(answer, len(re.findall("(:|-|!|.|,|\?|;|\"|'|`| )" + answer.lower()
-                                                                            + "(:|-|!|.|,|\?|;|\"|'|`| )", response))))
-        if self.answers[0].coincidences == self.answers[1].coincidences == self.answers[2].coincidences:
-            self.doReverse()
+                    current_count += len(re.findall("(:|-|!|.|,|\?|;|\"|'|`| )" + part.lower() + "(:|-|!|.|,|\?|;|\"|'|`| )", response))
+                    self.logger.debug("processed " + part + ", found " + str(current_count) + " occs in total")
+                self.answers.append(KleverAnswer(answer, current_count))
+        a = [b.coincidences for b in self.answers]
+        if a[1:] == a[:-1]:
+            self.doReverse(a)
+        del a
 
 
 
-    def doReverse(self):
+    def doReverse(self, prev_results):
         self.logger.info("doing reverse search..")
-        prev_results = (
-            self.answers[0].coincidences,
-            self.answers[1].coincidences,
-            self.answers[2].coincidences
-        )
         self.answers = []
         i = 0
         for answer in self._answers:
@@ -142,7 +195,7 @@ class KleverGoogler():
         base = re.sub("("+"|".join(self.FILTERED_WORDS)+")( |)", "", base)
         pattern = re.compile(r'\b(' + '|'.join(self.OPTIMIZE_DICT.keys()) + r')\b')
         base = pattern.sub(lambda x: self.OPTIMIZE_DICT[x.group()], base)
-        self.logger.info("optimized string:" + base )
+        self.logger.info("optimized string:" + base)
         return base
 
     def getLemmas(self, base):

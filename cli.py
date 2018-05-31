@@ -440,7 +440,7 @@ class App(object):
         print("NEXT GAME:     ", datetime.utcfromtimestamp(self.game_start).replace(tzinfo=timezone.utc).astimezone(
                 tz=None).strftime("%H:%M") if self.state != self.GAME_STATE_STARTED else "NOW!")
         print("PRIZE (RUB):  \t" + str(self.prize))
-        print("STATE:  \t\t" + str(self.state))
+        print("STATE:  \t" + str(self.state))
         # END BASE DATA DISPLAY #
 
     def showCliHelp(self):
@@ -532,7 +532,7 @@ class App(object):
               "custom, c   - process a custom question\n"
               "e, exit     - exit from application\n"
               "vidinfo     - information about current video\n"
-              "cfg, config - configure application")
+              "config      - configure application")
 
     def displayQuestion(self, question: KleverQuestion, googler: KleverGoogler, is_custom: bool=False):
         print("Question " + str(question.id) + ":", question.question)

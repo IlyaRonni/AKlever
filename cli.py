@@ -512,6 +512,7 @@ class App(object):
                     # base server https://api.vk.com/method/execute.getLastQuestion
                 response = json.loads(requests.post("https://api.vk.com/method/execute.getLastQuestion", data={"access_token": self.token, "v": "5.73", "https": 1}).text)["response"]
                 if response:
+                    print("Received question, thinking...", end="\r")
                     self.logger.debug("got question: " + response["text"])
                     google = KleverGoogler(response["text"], response["answers"][0]['text'], response["answers"][1]['text'],
                                             response["answers"][2]['text'], response["sent_time"], response["number"])
@@ -552,6 +553,7 @@ class App(object):
         print("\n==============================")
         if self.config["Config"]["debug_mode"] in ("basic", "verbose"):
             print("Query for custom question:\n" + str(question))
+            print("Optimized question:", question.optimized)
         if self.tg_client and self.config["Social"]["telegram_auto"] == "yes":
             self.tg_client.send_question(question)
         if self.config["Config"]["answer_ui"] == "yes":

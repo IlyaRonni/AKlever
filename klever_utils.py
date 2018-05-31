@@ -55,7 +55,7 @@ class KleverQuestion(object):
 class KleverGoogler():
     FILTERED_WORDS = ("сколько", "как много", "вошли в историю как", "какие", "как называется", "чем является",
                       "что из этого", "(у |)как(ой|ого|их) из( этих|)", "какой из героев", "традиционно", "согласно", " - ",
-                      "чем занимается", "чья профессия", "в (как|эт)ом году", "состоялся", "из фильма", "что из этого",
+                      "чем занимается", "чья профессия", "состоялся", "из фильма", "что из этого",
                       "какой", "является", "в мире", "и к", "термин(ов|ы|)", "относ(и|я)тся", "в какой",
                       "у как(ого|ой|их)", "согласно", "на каком", "состоялся", "по численности")
     OPTIMIZE_DICT = {
@@ -135,14 +135,18 @@ class KleverGoogler():
 
     def fetch(self, query, newquery=""):
         try:
+            print("Performing search for", query, end="\r")
             google = self.conn.get("https://www.google.ru/search?q=" + urllib.parse.quote_plus(query)).text.lower()
             yandex = self.conn.get("https://www.yandex.ru/search/?text=" + urllib.parse.quote_plus(query)).text.lower()
             newyandex = self.conn.get("https://www.yandex.ru/search/?text=" + urllib.parse.quote_plus(newquery)).text.lower() if newquery else ""
             ddg = self.conn.get("https://duckduckgo.com/?q=" + urllib.parse.quote_plus(query) + "&format=json").json()
             out = ""
-            smth = self.conn.get(ddg["AbstractURL"]).text.lower()
+            try:
+                smth = self.conn.get(ddg["AbstractURL"]).text.lower()
+                out += smth
+            except:
+                pass
             out += ddg["Abstract"]
-            out += smth
             if not "Our systems have detected unusual traffic from your computer network" in google\
                     and not "support.google.com/websearch/answer/86640" in google:
                 out += google
@@ -158,7 +162,7 @@ class KleverGoogler():
     def search(self):
         response = self.fetch(self.__question, self.newquestion)
         if all(" и " in s for s in self.__answers):  # если И есть в каждом ответе...
-            self.logger.info("found multipart question")
+            print("Found multipart question", end="\r")
             for answer in self.__answers:
                 current_count = 0
                 for part in answer.split(" и "):

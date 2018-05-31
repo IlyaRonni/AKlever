@@ -77,6 +77,7 @@ class App(object):
         self.state = 0
         self.current_answer = ""
         self.buf = ""
+        self.proxies = {"http": "socks5h://" + self.config["Social"]["telegram_proxy"], "https": "socks5h://" + self.config["Social"]["telegram_proxy"]} if self.config["Social"]["telegram_proxy"] else {}
 
     def checkUpdates(self):
         print("Checking for updates...", end="\r")
@@ -561,7 +562,7 @@ class App(object):
                 else:
                     message += "\n`[ ]`" + "Answer "+str(i+1)+": " + str(question.answers[i])
             message += "\n\n==============================\n"
-            tg = requests.get("https://api.telegram.org/bot"+self.config["Social"]["telegram_token"]+"/sendMessage?chat_id="+self.config["Social"]["telegram_channel"]+"&text="+message+"&parse_mode=markdown")
+            tg = requests.get("https://api.telegram.org/bot"+self.config["Social"]["telegram_token"]+"/sendMessage?chat_id="+self.config["Social"]["telegram_channel"]+"&text="+message+"&parse_mode=markdown", proxies=self.proxies)
         if self.config["Config"]["answer_ui"] == "yes":
             while True:
                 print("0. Continue")

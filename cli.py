@@ -445,7 +445,7 @@ class App(object):
         print("======={ YOUR STATS }=======")
         print("BALANCE (RUB):  " + str(self.balance))
         print("EXTRA LIVES:  \t" + str(self.lives))
-        print("CLEVERS: \t\t" + str(self.coins))
+        print("CLEVERS:  \t" + str(self.coins))
         print("RATING (%):  \t" + str(self.rating))
         print("======={ GAME  INFO }=======")
         print("NEXT GAME:     ", datetime.utcfromtimestamp(self.game_start).replace(tzinfo=timezone.utc).astimezone(

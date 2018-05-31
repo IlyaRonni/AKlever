@@ -543,7 +543,7 @@ class App(object):
         if self.config["Config"]["debug_mode"] in ("basic", "verbose"):
             print("Query for custom question:\n" + str(question))
             print("Optimized question:", question.optimized)
-        if self.tg_client and self.config["Social"]["telegram_auto"] == "yes":
+        if self.config["Social"]["telegram_auto"] == "yes":
             message = "Question " + str(question.id) + ": "+  question.question
             message += "==============================\n"
             for i in range(3):

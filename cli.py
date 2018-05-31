@@ -553,7 +553,15 @@ class App(object):
         if self.config["Config"]["debug_mode"] in ("basic", "verbose"):
             print("Query for custom question:\n" + str(question))
         if self.tg_client and self.config["Social"]["telegram_auto"] == "yes":
-            self.tg_client.send_question(question)
+            message = "Question " + str(question.id) + ": "+  question.question
+            message += "==============================\n"
+            for i in range(3):
+                if i == int(question.best[0])-1:
+                    message += "\n`[~]`" + "Answer "+str(i+1)+": " + str(question.answers[i])
+                else:
+                    message += "\n`[ ]`" + "Answer "+str(i+1)+": " + str(question.answers[i])
+            message += "\n\n==============================\n"
+            tg = requests.get("https://api.telegram.org/bot"+self.config["Social"]["telegram_token"]+"/sendMessage?chat_id="+self.config["Social"]["telegram_channel"]+"&text="+message+"&parse_mode=markdown")
         if self.config["Config"]["answer_ui"] == "yes":
             while True:
                 print("0. Continue")

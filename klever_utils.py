@@ -19,12 +19,13 @@ class KleverAnswer():
 
 
 class KleverQuestion(object):
-    def __init__(self, question, answers: list, sent_time: int, kid: int):
+    def __init__(self, question, answers: list, sent_time: int, kid: int, optimized: str):
         self.question = question
         self.answers = answers
         self.sent_time = sent_time
         self.id = kid
         self.reverse = " не " in question.lower() or " ни " in question.lower()
+        self.optimized = optimized
 
     def __str__(self):
         return self.question + ":" + self.answers[0].text + "#" + self.answers[1].text + "#" + self.answers[2].text
@@ -56,8 +57,9 @@ class KleverGoogler():
                       "что из этого", "(у |)как(ой|ого|их) из( этих|)", "какой из героев", "традиционно", "согласно", " - ",
                       "чем занимается", "чья профессия", "в (как|эт)ом году", "состоялся", "из фильма", "что из этого",
                       "какой", "является", "в мире", "и к", "термин(ов|ы|)", "относ(и|я)тся", "в какой",
-                      "у как(ого|ой|их)", "согласно", "на каком")
+                      "у как(ого|ой|их)", "согласно", "на каком", "состоялся", "по численности")
     OPTIMIZE_DICT = {
+        "в каком году": "когда",
         "какого животного": "кого", ###############################
         "один": "1",                ###############################
         "одна": "1",                ###############################
@@ -118,7 +120,7 @@ class KleverGoogler():
         self._question = question
         self.__question = self.optimizeString(question)
         self.answers = []
-        self._answers = [answer1, answer2, answer3]
+        self.__answers = [self.optimizeString(a) for a in (answer1, answer2, answer3)]
         self.newquestion = self.__question+'("'+answer1+'" | "'+answer2+'" | "'+answer3+'")'
         self.conn = requests.Session()
         self.sent_time = sent_time
@@ -135,12 +137,12 @@ class KleverGoogler():
         try:
             google = self.conn.get("https://www.google.ru/search?q=" + urllib.parse.quote_plus(query)).text.lower()
             yandex = self.conn.get("https://www.yandex.ru/search/?text=" + urllib.parse.quote_plus(query)).text.lower()
-            newyandex = self.conn.get("https://www.yandex.ru/search/?text=" + urllib.parse.quote_plus(newquery)).text.lower() if newquery else "" #Question ("Ans1" | "Ans2" | "Ans3") (Ported from apihot.ru)
-            duckduckgo = self.conn.get("https://duckduckgo.com/?q=" + urllib.parse.quote_plus(query)).text.lower() #NO CAPTCHA!
-            mail = self.conn.get("https://go.mail.ru/search?q=" + urllib.parse.quote_plus(query)).text.lower() #May help in some situations...
-            wiki = self.conn.get("https://ru.wikipedia.org/w/index.php?search=" + urllib.parse.quote_plus(query)).text.lower() #Wikipedia may help here
-            dog = self.conn.get("http://www.dogpile.com/search/web?q=" + urllib.parse.quote_plus(query)).text.lower() #Search engine, which search in many search engines
+            newyandex = self.conn.get("https://www.yandex.ru/search/?text=" + urllib.parse.quote_plus(newquery)).text.lower() if newquery else ""
+            ddg = self.conn.get("https://duckduckgo.com/?q=" + urllib.parse.quote_plus(query) + "&format=json").json()
             out = ""
+            smth = self.conn.get(ddg["AbstractURL"]).text.lower()
+            out += ddg["Abstract"]
+            out += smth
             if not "Our systems have detected unusual traffic from your computer network" in google\
                     and not "support.google.com/websearch/answer/86640" in google:
                 out += google
@@ -148,10 +150,6 @@ class KleverGoogler():
                 out += yandex
             if not "{\"captchaSound\"" in newyandex:
                 out += newyandex
-            out += duckduckgo
-            out += mail #I've never seen a captcha here, but I think it is...
-            out += wiki
-            out += dog
             return out
         except Exception as e:
             self.logger.error("Exception occurred while trying to search:" + str(e))
@@ -159,9 +157,9 @@ class KleverGoogler():
 
     def search(self):
         response = self.fetch(self.__question, self.newquestion)
-        if all(" и " in s for s in self._answers):  # если И есть в каждом ответе...
+        if all(" и " in s for s in self.__answers):  # если И есть в каждом ответе...
             self.logger.info("found multipart question")
-            for answer in self._answers:
+            for answer in self.__answers:
                 current_count = 0
                 for part in answer.split(" и "):
                     current_count += len(re.findall("(:|-|!|.|,|\?|;|\"|'|`| )" + part.lower() + "(:|-|!|.|,|\?|;|\"|'|`| )", response))
@@ -169,7 +167,7 @@ class KleverGoogler():
                 self.answers.append(KleverAnswer(answer, current_count))
         else:
             self.logger.info("usual question, processing..")
-            for answer in self._answers:
+            for answer in self.__answers:
                 current_count = 0
                 for part in answer.split(" "):
                     current_count += len(re.findall("(:|-|!|.|,|\?|;|\"|'|`| )" + part.lower() + "(:|-|!|.|,|\?|;|\"|'|`| )", response))
@@ -186,7 +184,7 @@ class KleverGoogler():
         self.logger.info("doing reverse search..")
         self.answers = []
         i = 0
-        for answer in self._answers:
+        for answer in self.__answers:
             rsp = self.fetch(self.optimizeString(answer))
             sumd = 0
             for word in self.getLemmas(self.__question):
@@ -197,7 +195,7 @@ class KleverGoogler():
         self.ran_reverse = True
 
     def genQuestion(self):
-        a = KleverQuestion(self._question, self.answers, self.sent_time, self.number)
+        a = KleverQuestion(self._question, self.answers, self.sent_time, self.number, self.__question)
         a.calculate_probability()
         return a
 

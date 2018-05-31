@@ -450,7 +450,7 @@ class App(object):
         print("======={ GAME  INFO }=======")
         print("NEXT GAME:     ", datetime.utcfromtimestamp(self.game_start).replace(tzinfo=timezone.utc).astimezone(
                 tz=None).strftime("%H:%M") if self.state != self.GAME_STATE_STARTED else "NOW!")
-        print("PRIZE (RUB):  \t\t" + str(self.prize))
+        print("PRIZE (RUB):  \t" + str(self.prize))
         print("STATE:  \t\t" + str(self.state))
         # END BASE DATA DISPLAY #
 

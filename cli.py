@@ -9,7 +9,6 @@ import urllib.request, urllib.parse
 import requests
 import requests.exceptions
 from klever_utils import *
-import social_utils
 import webbrowser
 import configparser
 
@@ -57,17 +56,6 @@ class App(object):
             self.config["Social"]["telegram"] = "off"
         if self.config["Social"]["telegram_auto"] not in ("off", "on"):
             self.config["Social"]["telegram_auto"] = "off"
-        if self.config["Social"]["telegram"] == "on":
-            try:
-                self.tg_client = social_utils.TGClient(self.config["Social"]["telegram_token"],
-                                                       self.config["Social"]["telegram_channel"],
-                                                       self.config["Social"]["telegram_proxy"])
-            except:
-                self.config["Social"]["telegram"] = "off"
-                self.saveConfig()
-                self.tg_client = None
-        else:
-            self.tg_client = None
         self.game_start = 0
         self.prize = 0
         self.balance = 0
@@ -77,6 +65,7 @@ class App(object):
         self.state = 0
         self.current_answer = ""
         self.buf = ""
+        self.proxies = {"http": "socks5h://" + self.config["Social"]["telegram_proxy"], "https": "socks5h://" + self.config["Social"]["telegram_proxy"]} if self.config["Social"]["telegram_proxy"] else {}
 
     def checkUpdates(self):
         print("Checking for updates...", end="\r")
@@ -555,7 +544,15 @@ class App(object):
             print("Query for custom question:\n" + str(question))
             print("Optimized question:", question.optimized)
         if self.tg_client and self.config["Social"]["telegram_auto"] == "yes":
-            self.tg_client.send_question(question)
+            message = "Question " + str(question.id) + ": "+  question.question
+            message += "==============================\n"
+            for i in range(3):
+                if i == int(question.best[0])-1:
+                    message += "\n`[~]`" + "Answer "+str(i+1)+": " + str(question.answers[i])
+                else:
+                    message += "\n`[ ]`" + "Answer "+str(i+1)+": " + str(question.answers[i])
+            message += "\n\n==============================\n"
+            tg = requests.get("https://api.telegram.org/bot"+self.config["Social"]["telegram_token"]+"/sendMessage?chat_id="+self.config["Social"]["telegram_channel"]+"&text="+message+"&parse_mode=markdown", proxies=self.proxies)
         if self.config["Config"]["answer_ui"] == "yes":
             while True:
                 print("0. Continue")

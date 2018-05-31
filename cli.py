@@ -109,12 +109,11 @@ class App(object):
             print("3. Updates check:", self.config["Config"]["updates"])
             print("4. Telegram integration")
             print("5. Answer UI:", self.config["Config"]["answer_ui"])
-            print("6. Communication method:", self.config["Config"]["api_type"])
             print("0. Save and exit", "[EDITED]" if edited else "")
-            a = input("[0-6] > ")
+            a = input("[0-5] > ")
             while isInt(a) not in range(7):
                 print("Invalid option")
-                a = input("[0-6] > ")
+                a = input("[0-5] > ")
             a = int(a)
             if a == 0:
                 self.saveConfig()
@@ -291,27 +290,6 @@ class App(object):
                         self.config["Social"]["answer_ui"] = "on"
                     elif c == 2:
                         self.config["Social"]["answer_ui"] = "off"
-                    edited = True
-            elif a == 6:
-                while True:
-                    print("1. More info")
-                    print("2.", "[x]" if self.config["Config"]["api_type"] == "longpoll" else "[ ]", "Longpoll")
-                    print("3.", "[x]" if self.config["Config"]["api_type"] == "requests" else "[ ]", "Requests")
-                    print("0. Back")
-                    c = input("[0-3] > ")
-                    while isInt(c) not in range(4):
-                        print("Invalid option")
-                        c = input("[0-3] > ")
-                    c = int(c)
-                    if c == 0:
-                        break
-                    elif c == 1:
-                        webbrowser.open("https://github.com/TaizoGem/AKlever/wiki/Communication-types")
-                        continue
-                    elif c == 2:
-                        self.config["Config"]["api_type"] = "longpoll"
-                    elif c == 3:
-                        self.config["Social"]["api_type"] = "requests"
                     edited = True
 
 

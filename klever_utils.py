@@ -136,6 +136,10 @@ class KleverGoogler():
             google = self.conn.get("https://www.google.ru/search?q=" + urllib.parse.quote_plus(query)).text.lower()
             yandex = self.conn.get("https://www.yandex.ru/search/?text=" + urllib.parse.quote_plus(query)).text.lower()
             newyandex = self.conn.get("https://www.yandex.ru/search/?text=" + urllib.parse.quote_plus(newquery)).text.lower() if newquery else "" #Question ("Ans1" | "Ans2" | "Ans3") (Ported from apihot.ru)
+            duckduckgo = self.conn.get("https://duckduckgo.com/?q=" + urllib.parse.quote_plus(query)).text.lower() #NO CAPTCHA!
+            mail = self.conn.get("https://go.mail.ru/search?q=" + urllib.parse.quote_plus(query)).text.lower() #May help in some situations...
+            wiki = self.conn.get("https://ru.wikipedia.org/w/index.php?search=" + urllib.parse.quote_plus(query)).text.lower() #Wikipedia may help here
+            dog = self.conn.get("http://www.dogpile.com/search/web?q=" + urllib.parse.quote_plus(query)).text.lower() #Search engine, which search in many search engines
             out = ""
             if not "Our systems have detected unusual traffic from your computer network" in google\
                     and not "support.google.com/websearch/answer/86640" in google:
@@ -144,6 +148,10 @@ class KleverGoogler():
                 out += yandex
             if not "{\"captchaSound\"" in newyandex:
                 out += newyandex
+            out += duckduckgo
+            out += mail #I've never seen a captcha here, but I think it is...
+            out += wiki
+            out += dog
             return out
         except Exception as e:
             self.logger.error("Exception occurred while trying to search:" + str(e))

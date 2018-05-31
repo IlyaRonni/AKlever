@@ -253,7 +253,7 @@ class App(object):
                             edited = True
                     elif b == 4:
                         while True:
-                            print("In Russia, some providers (try to) block Telegram API server, so")
+                            print("In several countries, some providers (try to) block Telegram API server, so")
                             print("you may need a SOCKS5 proxy to connect")
                             print("1. Set proxy")
                             print("0. Back")
@@ -445,7 +445,7 @@ class App(object):
         print("======={ YOUR STATS }=======")
         print("BALANCE (RUB):  " + str(self.balance))
         print("EXTRA LIVES:  \t" + str(self.lives))
-        print("COINS: \t\t" + str(self.coins))
+        print("CLEVERS:  \t" + str(self.coins))
         print("RATING (%):  \t" + str(self.rating))
         print("======={ GAME  INFO }=======")
         print("NEXT GAME:     ", datetime.utcfromtimestamp(self.game_start).replace(tzinfo=timezone.utc).astimezone(

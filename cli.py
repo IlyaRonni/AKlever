@@ -9,7 +9,6 @@ import urllib.request, urllib.parse
 import requests
 import requests.exceptions
 from klever_utils import *
-import social_utils
 import webbrowser
 import configparser
 
@@ -57,17 +56,6 @@ class App(object):
             self.config["Social"]["telegram"] = "off"
         if self.config["Social"]["telegram_auto"] not in ("off", "on"):
             self.config["Social"]["telegram_auto"] = "off"
-        if self.config["Social"]["telegram"] == "on":
-            try:
-                self.tg_client = social_utils.TGClient(self.config["Social"]["telegram_token"],
-                                                       self.config["Social"]["telegram_channel"],
-                                                       self.config["Social"]["telegram_proxy"])
-            except:
-                self.config["Social"]["telegram"] = "off"
-                self.saveConfig()
-                self.tg_client = None
-        else:
-            self.tg_client = None
         self.game_start = 0
         self.prize = 0
         self.balance = 0

@@ -561,7 +561,7 @@ class App(object):
                 if not googler.ran_reverse:
                     num += (2,)
                     print("2. force do reverse search")
-                if self.tg_client and not self.config["Social"]["telegram_auto"] == "yes":
+                if not self.config["Social"]["telegram_auto"] == "yes":
                     num += (3,)
                     print("3. Send to @" + self.config["Social"]["telegram_channel"])
                 a = input(" > ")

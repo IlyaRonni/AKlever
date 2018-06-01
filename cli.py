@@ -288,9 +288,9 @@ class CleverBot(object):
         self.vid = ""
         self.longPollServer = ""
         if self.config["Config"]["debug_mode"] == "verbose":
-            self.logger.setLevel(logging.DEBUG)
+            logger.setLevel(logging.DEBUG)
         elif self.config["Config"]["debug_mode"] == "basic":
-            self.logger.setLevel(logging.INFO)
+            logger.setLevel(logging.INFO)
         elif self.config["Config"]["debug_mode"] not in ("verbose", "disabled", "basic"):
             self.config["Config"]["debug_mode"] = "disabled"
         if self.config["Config"]["updates"] not in ("off", "on"):
@@ -543,10 +543,10 @@ class CleverBot(object):
 
     def initConfig(self):
         if os.path.exists("config.ak"):
-            self.logger.debug("config exists")
+            logger.debug("config exists")
             self.config.read("config.ak")
             return
-        self.logger.debug("creating config")
+        logger.debug("creating config")
         self.config.add_section("Config")
         self.config.add_section("Social")
         self.config["Social"]["telegram"] = "off"
@@ -569,9 +569,9 @@ class CleverBot(object):
         except KeyError:
             token = ""
         if token and self.validateToken(token) and not force:
-            self.logger.debug("valid token found in file: " + token)
+            logger.debug("valid token found in file: " + token)
         else:
-            self.logger.debug("token not found or is invalid, requesting..")
+            logger.debug("token not found or is invalid, requesting..")
             print("Hi! You are 1 step behind using this bot! Since VK Clever sends questions via VK API, we need access"
                   "\ntoken to be able to get them. It is important to use token with Clever appid.\n"
                   "To get token you just need to click enter, authenticate app in browser (if not already)\n"
@@ -616,10 +616,10 @@ class CleverBot(object):
             urllib.request.urlopen("https://api.vk.com/method/users.get?v=5.73&access_token=" + token).read())
         try:
             out["response"]
-            self.logger.debug("token is valid")
+            logger.debug("token is valid")
             return True
         except KeyError:
-            self.logger.debug("token is invalid")
+            logger.debug("token is invalid")
             return False
 
     def getStartData(self):
@@ -683,11 +683,12 @@ class CleverBot(object):
                 sys.exit()
             elif "--logfile" in arg:
                 if not "=" in arg or len(arg.split("=")[1]) == 0:
+                    global logger
                     logging.basicConfig(filename="log.ak", filemode="a", format='[%(levelname)s] %(message)s')
-                    self.logger = logging.getLogger()
+                    logger = logging.getLogger(APP_NAME)
                 else:
                     logging.basicConfig(filename=arg.split("=")[1], filemode="a", format='[%(levelname)s] %(message)s')
-                    self.logger = logging.getLogger()
+                    logger = logging.getLogger(APP_NAME)
             elif "--token" in arg:
                 if not "=" in arg:
                     print("Token is not specified!")
@@ -729,7 +730,7 @@ class CleverBot(object):
                     "response"]
                 if response:
                     print("Received question, thinking...", end="\r")
-                    self.logger.debug("got question: " + response["text"])
+                    logger.debug("got question: " + response["text"])
                     google = KleverGoogler(response["text"], response["answers"][0]['text'],
                                            response["answers"][1]['text'],
                                            response["answers"][2]['text'], response["sent_time"], response["number"])
@@ -752,10 +753,10 @@ class CleverBot(object):
                         except KeyError:
                             time.sleep(1)
                 else:
-                    self.logger.debug("No question, waiting..")
+                    logger.debug("No question, waiting..")
                     time.sleep(1)
             except (KeyboardInterrupt, SystemExit):
-                self.logger.debug("stopping")
+                logger.debug("stopping")
                 return
             except requests.exceptions.ConnectionError:
                 pass

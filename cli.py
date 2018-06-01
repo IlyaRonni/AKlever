@@ -2,16 +2,17 @@
 import os
 from datetime import datetime, timezone
 import json
-import logging
 import sys
 import time
 import urllib.request, urllib.parse
-import requests
 import requests.exceptions
 from klever_utils import *
 import webbrowser
 import configparser
-
+try:
+    from lomond import WebSocket
+except ImportError:
+    print("WebSocket module is not installed. VVP, HQ and CS won't be available.", file=sys.stderr)
 
 def isInt(str):
     try:
@@ -24,10 +25,9 @@ class App(object):
     GAME_STATE_PLANNED = "Planned"
     GAME_STATE_STARTED = "Started"
     GAME_STATE_FINISHED = "Finished"
-    ACTIONS = ("?", "h", "run", "start", "auth", "custom", "exit", "e", "settings", "config", "q", "c", "vidinfo", "r")
+    ACTIONS = ("?", "h", "run", "start", "auth", "custom", "exit", "e", "settings", "config", "q", "c", "vidinfo", "r", "vvp")
     APP_NAME = "AKlever"  # if you want you can change name of bot here - it will change everywhere
-    with open("version") as file:
-        VERSION = file.read().split("|")
+    VERSION = 0.94
 
     logging.basicConfig(format='[%(levelname)s] %(message)s')
     logger = logging.getLogger()
@@ -65,7 +65,9 @@ class App(object):
         self.state = 0
         self.current_answer = ""
         self.buf = ""
-        self.proxies = {"http": "socks5h://" + self.config["Social"]["telegram_proxy"], "https": "socks5h://" + self.config["Social"]["telegram_proxy"]} if self.config["Social"]["telegram_proxy"] else {}
+        self.proxies = {"http": "socks5h://" + self.config["Social"]["telegram_proxy"],
+                        "https": "socks5h://" + self.config["Social"]["telegram_proxy"]} if self.config["Social"][
+            "telegram_proxy"] else {}
 
     def checkUpdates(self):
         print("Checking for updates...", end="\r")
@@ -73,9 +75,9 @@ class App(object):
             v = requests.get("https://raw.githubusercontent.com/TaizoGem/AKlever/master/version").text.split("|")
             float(v[0])
         except:
-            print("Unable to check for updates. Current version:", self.VERSION[0])
+            print("Unable to check for updates. Current version:", self.VERSION)
             return
-        if float(v[0]) > float(self.VERSION[0]):
+        if float(v[0]) > float(self.VERSION):
             print("New version is available, would you like to auto-update?")
             if input("[Y/n] ") not in ("n", "N", "П", "п"):
                 os.system("git pull")
@@ -103,7 +105,7 @@ class App(object):
     def configurate(self):
         edited = False
         while True:
-            print("Configurating "+self.APP_NAME+". Choose option to edit from list below:")
+            print("Configurating " + self.APP_NAME + ". Choose option to edit from list below:")
             print("1. Debug mode:", self.config["Config"]["debug_mode"])
             print("2. VK auth token")
             print("3. Updates check:", self.config["Config"]["updates"])
@@ -121,9 +123,12 @@ class App(object):
                 return
             elif a == 1:
                 while True:
-                    print("1.", "[x]" if self.config["Config"]["debug_mode"] == "disabled" else "[ ]", "Disabled - only log critical exceptions")
-                    print("2.", "[x]" if self.config["Config"]["debug_mode"] == "basic" else "[ ]", "Basic - log some information")
-                    print("3.", "[x]" if self.config["Config"]["debug_mode"] == "verbose" else "[ ]", "Verbose - log basically everything")
+                    print("1.", "[x]" if self.config["Config"]["debug_mode"] == "disabled" else "[ ]",
+                          "Disabled - only log critical exceptions")
+                    print("2.", "[x]" if self.config["Config"]["debug_mode"] == "basic" else "[ ]",
+                          "Basic - log some information")
+                    print("3.", "[x]" if self.config["Config"]["debug_mode"] == "verbose" else "[ ]",
+                          "Verbose - log basically everything")
                     print("\n0. Back")
                     b = input("[0-3] > ")
                     while isInt(b) not in range(4):
@@ -174,10 +179,12 @@ class App(object):
                     edited = True
             elif a == 4:
                 while True:
-                    print("Since 0.90 "+self.APP_NAME+" supports Telegram integration")
+                    print("Since 0.90 " + self.APP_NAME + " supports Telegram integration")
                     print("You can change:")
                     print("1. Enable:", self.config["Social"]["telegram"])
-                    print("2. Bot token:", self.config["Social"]["telegram_token"][:7] + "******" + self.config["Social"]["telegram_token"][38:])
+                    print("2. Bot token:",
+                          self.config["Social"]["telegram_token"][:7] + "******" + self.config["Social"][
+                                                                                       "telegram_token"][38:])
                     print("3. Channel to post: @" + self.config["Social"]["telegram_channel"])
                     print("4. Proxy: " + self.config["Social"]["telegram_proxy"])
                     print("5. Auto send to channel:", self.config["Social"]["telegram_auto"])
@@ -225,7 +232,8 @@ class App(object):
                             edited = True
                     elif b == 3:
                         while True:
-                            print("For "+self.APP_NAME+" to work correctly, we need to know to which channel to post")
+                            print(
+                                "For " + self.APP_NAME + " to work correctly, we need to know to which channel to post")
                             print("Your bot must be admin in this channel with rights to post messages")
                             print("1. Change channel")
                             print("0. Back")
@@ -253,7 +261,8 @@ class App(object):
                             if c == 0:
                                 break
                             elif c == 1:
-                                self.config["Social"]["telegram_proxy"] = input("Enter you proxy in this format: [login[:password]@]server.tld[:port]\n > ")
+                                self.config["Social"]["telegram_proxy"] = input(
+                                    "Enter you proxy in this format: [login[:password]@]server.tld[:port]\n > ")
                             edited = True
                     elif b == 5:
                         while True:
@@ -292,9 +301,9 @@ class App(object):
                         self.config["Social"]["answer_ui"] = "off"
                     edited = True
 
-
     def getTokenInfo(self):
-        a = json.loads(requests.get("https://api.vk.com/method/users.get?v=5.73&access_token=" + self.token).text)["response"][0]
+        a = json.loads(requests.get("https://api.vk.com/method/users.get?v=5.73&access_token=" + self.token).text)[
+            "response"][0]
         return str(a["id"]) + " > " + a["first_name"] + " " + a["last_name"]
 
     def initConfig(self):
@@ -336,7 +345,8 @@ class App(object):
             while True:
                 if input("[PRESS ENTER NO OPEN AUTH PAGE]") not in ("e", "E", "У", "у"):
                     try:
-                        webbrowser.open("https://oauth.vk.com/authorize?client_id=6334949&display=page&scope=friends,offline,video&response_type=token&v=5.73")
+                        webbrowser.open(
+                            "https://oauth.vk.com/authorize?client_id=6334949&display=page&scope=friends,offline,video&response_type=token&v=5.73")
                     except Exception:
                         print("failed to open browser, open it by yourself, please:\n"
                               "https://oauth.vk.com/authorize?client_id=6334949&display=page&scope=friends,offline,video&response_type=token&v=5.73")
@@ -397,7 +407,8 @@ class App(object):
             self.state = self.GAME_STATE_PLANNED
         elif a == "started":
             self.state = self.GAME_STATE_STARTED
-            self.vid = str(response["game_info"]["game"]["video_owner_id"]) + "_" + str(response["game_info"]["game"]["video_id"])
+            self.vid = str(response["game_info"]["game"]["video_owner_id"]) + "_" + str(
+                response["game_info"]["game"]["video_id"])
             self.longPollServer = requests.post("https://api.vk.com/method/video.getLongPollServer", data={
                 "video_id": response["game_info"]["game"]["video_id"],
                 "owner_id": response["game_info"]["game"]["video_owner_id"],
@@ -416,18 +427,19 @@ class App(object):
         print("RATING (%):  \t" + str(self.rating))
         print("======={ GAME  INFO }=======")
         print("NEXT GAME:     ", datetime.utcfromtimestamp(self.game_start).replace(tzinfo=timezone.utc).astimezone(
-                tz=None).strftime("%H:%M") if self.state != self.GAME_STATE_STARTED else "NOW!")
+            tz=None).strftime("%H:%M") if self.state != self.GAME_STATE_STARTED else "NOW!")
         print("PRIZE (RUB):  \t" + str(self.prize))
         print("STATE:  \t" + str(self.state))
         # END BASE DATA DISPLAY #
 
     def showCliHelp(self):
         self.showHelp()
-        print("\n"+self.APP_NAME+" can also work in CLI mode! You can see list of available params in list below:",
-        "--only=<run|config> - only runs command passed instead of text interface",
-        "-h, --help          - shows this help and quits",
-        "--token=<token>     - overwrites token for this session (does NOT change token in config file)",
-        "--custom=<string>   - processes passed question in syntax q:a1#a2#a2, displays output and quits", sep="\n")
+        print("\n" + self.APP_NAME + " can also work in CLI mode! You can see list of available params in list below:",
+              "--only=<run|config> - only runs command passed instead of text interface",
+              "-h, --help          - shows this help and quits",
+              "--token=<token>     - overwrites token for this session (does NOT change token in config file)",
+              "--custom=<string>   - processes passed question in syntax q:a1#a2#a2, displays output and quits",
+              sep="\n")
 
     def parseArgs(self, argv: list):
         for arg in argv:
@@ -470,19 +482,21 @@ class App(object):
                         pass
                         self.configurate()
 
-
     def startGame(self):
         print("To stop press Ctrl-C")
         while True:
             try:
                 # example question https://gist.githubusercontent.com/TaizoGem/1aea44b8e5fa05550f50617673809ccb/raw/a93b1b060a595142c8ed13111a5e56f4e1afe6ee/aklever.test.json
-                    # base server https://api.vk.com/method/execute.getLastQuestion
-                response = json.loads(requests.post("https://api.vk.com/method/execute.getLastQuestion", data={"access_token": self.token, "v": "5.73", "https": 1}).text)["response"]
+                # base server https://api.vk.com/method/execute.getLastQuestion
+                response = json.loads(requests.post("https://api.vk.com/method/execute.getLastQuestion",
+                                                    data={"access_token": self.token, "v": "5.73", "https": 1}).text)[
+                    "response"]
                 if response:
                     print("Received question, thinking...", end="\r")
                     self.logger.debug("got question: " + response["text"])
-                    google = KleverGoogler(response["text"], response["answers"][0]['text'], response["answers"][1]['text'],
-                                            response["answers"][2]['text'], response["sent_time"], response["number"])
+                    google = KleverGoogler(response["text"], response["answers"][0]['text'],
+                                           response["answers"][1]['text'],
+                                           response["answers"][2]['text'], response["sent_time"], response["number"])
                     try:
                         google.search()
                     except ConnectionResetError as e:
@@ -500,9 +514,9 @@ class App(object):
                 pass
 
     def showHelp(self):
-        print("This is "+self.APP_NAME+", bot for VK Clever, quiz with money prizes by VK Team\n"
-              "Coded by TaizoGem, source is available at:\ngithub.com/TaizoGem/AKlever\n"
-              "Current version:", self.VERSION[0], "from", self.VERSION[1],
+        print("This is " + self.APP_NAME + ", bot for VK Clever, quiz with money prizes by VK Team\n"
+                                           "Coded by TaizoGem, source is available at:\ngithub.com/TaizoGem/AKlever\n"
+                                           "Current version:", self.VERSION,
               "\n\nAvailable commands:\n"
               "?, h        - display this menu\n"
               "run, start  - start working\n"
@@ -512,25 +526,34 @@ class App(object):
               "vidinfo     - information about current video\n"
               "config      - configure application")
 
-    def displayQuestion(self, question: KleverQuestion, googler: KleverGoogler, is_custom: bool=False):
+    def displayQuestion(self, question: KleverQuestion, googler: KleverGoogler, is_custom: bool = False):
         print("Question " + str(question.id) + ":", question.question)
         print("==============================\n")
         for i in range(3):
-            print(("[~]" if i == int(question.best[0])-1 else "[ ]"), "Answer "+str(i+1)+":", str(question.answers[i]))
+            print(("[~]" if i == int(question.best[0]) - 1 else "[ ]"), "Answer " + str(i + 1) + ":",
+                  str(question.answers[i]))
         print("\n==============================")
         if self.config["Config"]["debug_mode"] in ("basic", "verbose"):
             print("Query for custom question:\n" + str(question))
             print("Optimized question:", question.optimized)
         if self.config["Social"]["telegram_auto"] == "on":
-            message = "Question " + str(question.id) + ": "+  question.question
-            message += "==============================\n"
+            message = "Question " + str(question.id) + ": " + question.question
+            message += "\n==============================\n"
             for i in range(3):
-                if i == int(question.best[0])-1:
-                    message += "\n`[~]`" + "Answer "+str(i+1)+": " + str(question.answers[i])
+                if i == int(question.best[0]) - 1:
+                    message += "\n`[~]`" + " Answer " + str(i + 1) + ": " + str(question.answers[i])
                 else:
-                    message += "\n`[ ]`" + "Answer "+str(i+1)+": " + str(question.answers[i])
+                    message += "\n`[ ]`" + " Answer " + str(i + 1) + ": " + str(question.answers[i])
             message += "\n\n==============================\n"
-            requests.post("https://api.telegram.org/bot"+self.config["Social"]["telegram_token"]+"/sendMessage", data=dict(chat_id=self.config["Social"]["telegram_channel"], text=message, parse_mode="markdown"), proxies=self.proxies)
+            try:
+                a = requests.post(
+                    "https://api.telegram.org/bot" + self.config["Social"]["telegram_token"] + "/sendMessage",
+                    json=dict(chat_id="@" + self.config["Social"]["telegram_channel"],
+                              text=message,
+                              parse_mode="markdown"), proxies=self.proxies)
+                print(a.json())
+            except requests.exceptions.InvalidSchema:
+                print("Unable to send message to channel because socks support is not installed")
         if self.config["Config"]["answer_ui"] == "yes":
             while True:
                 print("0. Continue")
@@ -560,14 +583,30 @@ class App(object):
                     print()
                     return
                 elif a == 3:
-                    self.tg_client.send_question(question)
+                    message = "Question " + str(question.id) + ": " + question.question
+                    message += "\n==============================\n"
+                    for i in range(3):
+                        if i == int(question.best[0]) - 1:
+                            message += "\n`[~]`" + " Answer " + str(i + 1) + ": " + str(question.answers[i])
+                        else:
+                            message += "\n`[ ]`" + " Answer " + str(i + 1) + ": " + str(question.answers[i])
+                    message += "\n\n==============================\n"
+                    try:
+                        a = requests.post(
+                            "https://api.telegram.org/bot" + self.config["Social"]["telegram_token"] + "/sendMessage",
+                            json=dict(chat_id="@" + self.config["Social"]["telegram_channel"],
+                                      text=message,
+                                      parse_mode="markdown"), proxies=self.proxies)
+                        print(a.json())
+                    except requests.exceptions.InvalidSchema:
+                        print("Unable to send message to channel because socks support is not installed")
         elif not is_custom:
             time.sleep(10)
 
     def mainloop(self):
         while True:
             try:
-                action = input("[? for help] "+self.APP_NAME+" > ").lower()
+                action = input("[? for help] " + self.APP_NAME + " > ").lower()
                 if action not in self.ACTIONS:
                     print("Invalid action, enter ? or h for help")
                     continue
@@ -575,6 +614,8 @@ class App(object):
                     self.showHelp()
                 elif action in ("run", "start"):
                     self.startGame()
+                elif action == "vvp":
+                    self.startVVP()
                 elif action in ("e", "exit", "q"):
                     sys.exit()
                 elif action in ("custom", "c"):

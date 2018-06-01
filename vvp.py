@@ -216,14 +216,6 @@ class VVPGoogler():
                 out.append(a)
         return out
 
-try:
-    from lomond import WebSocket
-except ImportError:
-    print("WebSocket module is not installed")
-    if input("Install now? [y/N] ") in ("y", "Y"):
-        os.system("pip install lomond")
-    sys.exit(1)
-
 SERVERS = (
     "ws://ws-tosno1.trivia.incrdbl.me:8888/socket",
     "ws://ws-tosno2.trivia.incrdbl.me:8888/socket",

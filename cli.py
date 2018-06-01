@@ -1,18 +1,25 @@
 #!/usr/bin/python3
 import os
+import random
+import re
 from datetime import datetime, timezone
 import json
 import sys
 import time
 import urllib.request, urllib.parse
 import requests.exceptions
-from klever_utils import *
+import logging
 import webbrowser
 import configparser
 try:
     from lomond import WebSocket
 except ImportError:
     print("WebSocket module is not installed. VVP, HQ and CS won't be available.", file=sys.stderr)
+IS_EXE = __file__[:-4] == ".exe"
+APP_NAME = "AKlever"  # if you want you can change name of bot here - it will change everywhere
+VERSION = 0.94
+logging.basicConfig(format='[%(levelname)s] %(message)s')
+logger = logging.getLogger(APP_NAME)
 
 def isInt(str):
     try:
@@ -21,19 +28,259 @@ def isInt(str):
         return "no"
 
 
-class App(object):
+def checkUpdates():
+    print("Checking for updates...", end="\r")
+    try:
+        v = requests.get("https://raw.githubusercontent.com/TaizoGem/AKlever/master/version").text
+        float(v)
+    except:
+        print("Unable to check for updates. Current version:", VERSION)
+        return
+    if float(v) > float(VERSION):
+        print("New version is available, would you like to auto-update?")
+        if input("[Y/n] ") not in ("n", "N", "П", "п"):
+            if IS_EXE:
+                newversion = requests.get("https://github.com/TaizoGem/AKlever/releases/download/v"+v+"/aklever.exe")
+                if newversion.status_code == 200:
+                    import string
+                    filename = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6)) + ".exe"
+                    with open(filename, "wb") as f:
+                        f.write(newversion.content)  #                \/\/\/\/\/\/\/ waiting 3 seconds before copying
+                    os.system("start \"updating aklever\" cmd /c \"ping 127.0.0.1 -n 3 & move " + filename + " " + __file__ + " & start " + __file__ + "\"")
+                else:
+                    print("It seems that you are using .exe version of bot, and latest version is not yet compiled.\n"
+                          "Can't proceed.")
+            else:
+                newversion = requests.get(
+                    "https://raw.githubusercontent.com/TaizoGem/AKlever/master/cli.py")
+                if newversion.status_code == 200:
+                    import string
+                    filename = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6)) + ".py"
+                    with open(filename, "wb") as f:
+                        f.write(newversion.content)
+                    os.system(
+                        "start \"updating aklever\" cmd /c \"ping 127.0.0.1 -n 3 & move " + filename + " " + __file__ + " & python " + __file__ + "\"")
+                else:
+                    print("Oops, something went wrong. Can't proceed. Error code", newversion.status_code)
+
+
+class KleverAnswer():
+    def __init__(self, text, coincidences):
+        self.text = text
+        self.coincidences = coincidences
+        self.probability = 0
+
+    def __str__(self):
+        return self.text + " | " + str(self.probability) + "%"
+
+    def setProbability(self, new):
+        self.probability = new
+
+
+class KleverQuestion(object):
+    def __init__(self, question, answers: list, sent_time: int, kid: int, optimized: str):
+        self.question = question
+        self.answers = answers
+        self.sent_time = sent_time
+        self.id = kid
+        self.reverse = " не " in question.lower() or " ни " in question.lower()
+        self.optimized = optimized
+
+    def __str__(self):
+        return self.question + ":" + self.answers[0].text + "#" + self.answers[1].text + "#" + self.answers[2].text
+
+    def calculate_probability(self):
+        total = 0
+        for answer in self.answers:
+            total += answer.coincidences  # first of all count total, then anything else
+        for answer in self.answers:
+            if total == 0:
+                answer.setProbability(0)
+            else:
+                answer.setProbability(round(answer.coincidences / total * 100, 1))
+        if total == 0:
+            self.question += " | NOT FOUND!"
+            self.best = "0. ???"
+        else:
+            a = min(self.answers[a].coincidences for a in range(3)) if self.reverse else \
+                max(self.answers[a].coincidences for a in range(3))
+            i = 0
+            for answer in self.answers:
+                i += 1
+                if answer.coincidences == a:
+                    self.best = str(i) + ". " + answer.text
+
+
+class KleverGoogler():
+    FILTERED_WORDS = ("сколько", "как много", "вошли в историю как", "какие", "как называется", "чем является",
+                      "что из этого", "(у |)как(ой|ого|их) из( этих|)", "какой из героев", "традиционно", "согласно", " - ",
+                      "чем занимается", "чья профессия", "состоялся", "из фильма", "что из этого",
+                      "какой", "является", "в мире", "и к", "термин(ов|ы|)", "относ(и|я)тся", "в какой",
+                      "у как(ого|ой|их)", "согласно", "на каком", "состоялся", "по численности", "не", "ни")
+    OPTIMIZE_DICT = {
+        "в каком году": "когда",
+        "какого животного": "кого", ###############################
+        "один": "1",                ###############################
+        "одна": "1",                ###############################
+        "одно": "1",                ####        #######        ####
+        "два": "2",                 ####        #######        ####
+        "двое": "2",                ####        #######        ####
+        "две": "2",                 ####        #######        ####
+        "три": "3",                 ###############################
+        "трое": "3",                ##############   ##############
+        "четыре": "4",              ##############   ##############
+        "четверо": "4",             ##############   ##############
+        "пять": "5",                ###############################
+        "пятеро": "5",              ########               ########
+        "шесть": "6",               ########               ########
+        "шестеро": "6",             ####    ###############   #####
+        "семь": "7",                ####    ###############   #####
+        "семеро": "7",              ###############################
+        "восемь": "8",              ###############################
+        "девять": "9",              #####                     #####
+        "десять": "10",             #####                     #####
+        "одиннадцать": "11",        #############     #############
+        "двенадцать": "12",         #############     #############
+        "тринадцать": "13",         #############     #############
+        "четырнадцать": "14",       #############     #############
+        "пятнадцать": "15",         #############     #############
+        "шестнадцать": "16",        #############     #############
+        "семнадцать": "17",         #############     #############
+        "восемнадцать": "18",       #############     #############
+        "девятнадцать": "19",       ###############################
+        "двадцать": "20",           ###############################
+        "тридцать": "30",           ###############################
+        "сорок": "40",              ####         #####         ####
+        "пятьдесят": "50",          ####  ############  ###########
+        "шестьдесят": "60",         ####  ############  ###########
+        "семьдесят": "70",          ####  #####  #####  #####  ####
+        "восемьдесят": "80",        ####  ###### #####  ###### ####
+        "девяносто": "90",          ####  ###### #####  ###### ####
+        "сто": "100",               ####         #####         ####
+        "двести": "200",            ###############################
+        "триста": "300",            ###############################
+        "четыреста": "400",         ###############################
+        "пятьсот": "500",           ###############################
+        "шестьсот": "600",          ###############################
+        "семьсот": "700",           ###############################
+        "восемьсот": "800",         ######                   ######
+        "девятсот": "900",          ######  if you use this  ######
+        "тысача": "1000",           ######    please leave   ######
+        " тысячи": "000",           ######  copyright notice ######
+        " тысяч": "000",            ######                   ######
+        "миллион": "1000000",       ######   (c) TaizoGem    ######
+        " миллиона": "000000",      ###############################
+        " миллионов": "000000"      ###############################
+    }
+
+    def __init__(self, question: str, answer1: str, answer2: str, answer3: str, sent_time: int, num: int):
+        self._question = question
+        self.__question = self.optimizeString(question)
+        self.answers = []
+        self.__answers = [self.optimizeString(a) for a in (answer1, answer2, answer3)]
+        self.newquestion = self.__question+'("'+answer1+'" | "'+answer2+'" | "'+answer3+'")'
+        self.conn = requests.Session()
+        self.sent_time = sent_time
+        self.number = num
+
+    def fetch(self, query, newquery=""):
+        try:
+            print("Performing search for", query, end="\r")
+            google = self.conn.get("https://www.google.ru/search?q=" + urllib.parse.quote_plus(query)).text.lower()
+            yandex = self.conn.get("https://www.yandex.ru/search/?text=" + urllib.parse.quote_plus(query)).text.lower()
+            newyandex = self.conn.get("https://www.yandex.ru/search/?text=" + urllib.parse.quote_plus(newquery)).text.lower() if newquery else ""
+            ddg = self.conn.get("https://duckduckgo.com/?q=" + urllib.parse.quote_plus(query) + "&format=json").json()
+            out = ""
+            try:
+                smth = self.conn.get(ddg["AbstractURL"]).text.lower()
+                out += smth
+            except:
+                pass
+            out += ddg["Abstract"]
+            if not "Our systems have detected unusual traffic from your computer network" in google\
+                    and not "support.google.com/websearch/answer/86640" in google:
+                out += google
+            if not "{\"captchaSound\"" in yandex:
+                out += yandex
+            if not "{\"captchaSound\"" in newyandex:
+                out += newyandex
+            return out
+        except Exception as e:
+            logger.error("Exception occurred while trying to search:" + str(e))
+            return ""
+
+    def search(self):
+        response = self.fetch(self.__question, self.newquestion)
+        if all(" и " in s for s in self.__answers):  # если И есть в каждом ответе...
+            print("Found multipart question", end="\r")
+            for answer in self.__answers:
+                current_count = 0
+                for part in answer.split(" и "):
+                    current_count += len(re.findall("(:|-|!|.|,|\?|;|\"|'|`| )" + part.lower() + "(:|-|!|.|,|\?|;|\"|'|`| )", response))
+                    logger.debug("processed " + part + ", found " + str(current_count) + " occs in total")
+                self.answers.append(KleverAnswer(answer, current_count))
+        else:
+            logger.info("usual question, processing..")
+            for answer in self.__answers:
+                current_count = 0
+                for part in answer.split(" "):
+                    current_count += len(re.findall("(:|-|!|.|,|\?|;|\"|'|`| )" + part.lower() + "(:|-|!|.|,|\?|;|\"|'|`| )", response))
+                    logger.debug("processed " + part + ", found " + str(current_count) + " occs in total")
+                self.answers.append(KleverAnswer(answer, current_count))
+        a = [b.coincidences for b in self.answers]
+        if a[1:] == a[:-1]:
+            self.doReverse(a)
+        del a
+
+
+
+    def doReverse(self, prev_results=(0,0,0)):
+        logger.info("doing reverse search..")
+        self.answers = []
+        i = 0
+        for answer in self.__answers:
+            rsp = self.fetch(self.optimizeString(answer))
+            sumd = 0
+            for word in self.getLemmas(self.__question):
+                sumd += len(re.findall("(:|-|!|.|,|\?|;|\"|'|`| )" + word.lower() + "(:|-|!|.|,|\?|;|\"|'|`| )", rsp))
+                logger.debug("processed " + word + ", found " + str(sumd) + " occs in total")
+            self.answers.append(KleverAnswer(answer, prev_results[i] + sumd))
+            i += 1
+        self.ran_reverse = True
+
+    def genQuestion(self):
+        a = KleverQuestion(self._question, self.answers, self.sent_time, self.number, self.__question)
+        a.calculate_probability()
+        return a
+
+    def optimizeString(self, base):
+        base = base.lower()
+        base = re.sub("[\'@<!«»?,.]", "", base)
+        base = re.sub("("+"|".join(self.FILTERED_WORDS)+")( |)", "", base)
+        pattern = re.compile(r'\b(' + '|'.join(self.OPTIMIZE_DICT.keys()) + r')\b')
+        base = pattern.sub(lambda x: self.OPTIMIZE_DICT[x.group()], base)
+        logger.info("optimized string:" + base)
+        return base
+
+    def getLemmas(self, base):
+        out = []
+        for a in requests.get("http://www.solarix.ru/php/lemma-provider.php?query=" + urllib.parse.quote_plus(base)).text.split(" "):
+            a = a.replace("\r\n", "")
+            if a:
+                out.append(a)
+        return out
+
+
+class CleverBot(object):
     GAME_STATE_PLANNED = "Planned"
     GAME_STATE_STARTED = "Started"
     GAME_STATE_FINISHED = "Finished"
     ACTIONS = ("?", "h", "run", "start", "auth", "custom", "exit", "e", "settings", "config", "q", "c", "vidinfo", "r", "vvp")
-    APP_NAME = "AKlever"  # if you want you can change name of bot here - it will change everywhere
-    VERSION = 0.94
 
-    logging.basicConfig(format='[%(levelname)s] %(message)s')
-    logger = logging.getLogger()
 
     def __init__(self):
         super().__init__()
+        self.corrects = 0
         self.token = ""
         self.config = configparser.ConfigParser()
         self.initConfig()
@@ -51,7 +298,7 @@ class App(object):
         if self.config["Config"]["answer_ui"] not in ("off", "on"):
             self.config["Config"]["answer_ui"] = "off"
         if self.config["Config"]["updates"] == "on":
-            self.checkUpdates()
+            checkUpdates()
         if self.config["Social"]["telegram"] not in ("off", "on"):
             self.config["Social"]["telegram"] = "off"
         if self.config["Social"]["telegram_auto"] not in ("off", "on"):
@@ -68,20 +315,8 @@ class App(object):
         self.proxies = {"http": "socks5h://" + self.config["Social"]["telegram_proxy"],
                         "https": "socks5h://" + self.config["Social"]["telegram_proxy"]} if self.config["Social"][
             "telegram_proxy"] else {}
-
-    def checkUpdates(self):
-        print("Checking for updates...", end="\r")
-        try:
-            v = requests.get("https://raw.githubusercontent.com/TaizoGem/AKlever/master/version").text.split("|")
-            float(v[0])
-        except:
-            print("Unable to check for updates. Current version:", self.VERSION)
-            return
-        if float(v[0]) > float(self.VERSION):
-            print("New version is available, would you like to auto-update?")
-            if input("[Y/n] ") not in ("n", "N", "П", "п"):
-                os.system("git pull")
-                sys.exit()
+        self.getToken()
+        self.getStartData()
 
     def runCustom(self, q=""):
         if q == "":
@@ -91,7 +326,7 @@ class App(object):
         try:
             q = q.split(":")
             e = q[1].split("#")
-            google = KleverGoogler(q[0], e[0], e[1], e[2], 0, 0, self.config["Config"]["debug_mode"])
+            google = KleverGoogler(q[0], e[0], e[1], e[2], 0, 0)
             google.search()
             g = google.genQuestion()
             self.displayQuestion(g, google, True)
@@ -105,7 +340,7 @@ class App(object):
     def configurate(self):
         edited = False
         while True:
-            print("Configurating " + self.APP_NAME + ". Choose option to edit from list below:")
+            print("Configurating " + APP_NAME + ". Choose option to edit from list below:")
             print("1. Debug mode:", self.config["Config"]["debug_mode"])
             print("2. VK auth token")
             print("3. Updates check:", self.config["Config"]["updates"])
@@ -179,7 +414,7 @@ class App(object):
                     edited = True
             elif a == 4:
                 while True:
-                    print("Since 0.90 " + self.APP_NAME + " supports Telegram integration")
+                    print("Since 0.90 " + APP_NAME + " supports Telegram integration")
                     print("You can change:")
                     print("1. Enable:", self.config["Social"]["telegram"])
                     print("2. Bot token:",
@@ -233,7 +468,7 @@ class App(object):
                     elif b == 3:
                         while True:
                             print(
-                                "For " + self.APP_NAME + " to work correctly, we need to know to which channel to post")
+                                "For " + APP_NAME + " to work correctly, we need to know to which channel to post")
                             print("Your bot must be admin in this channel with rights to post messages")
                             print("1. Change channel")
                             print("0. Back")
@@ -326,7 +561,7 @@ class App(object):
         self.config.read("config.ak")
 
     def getToken(self, force=False):
-        print("Getting token...", end="\r")
+        print("Getting token...    ", end="\r")
         if self.token and not force:
             return
         try:
@@ -388,7 +623,7 @@ class App(object):
             return False
 
     def getStartData(self):
-        print("Getting data...", end="\r")
+        print("Getting data...       ", end="\r")
         response = json.loads(requests.post("https://api.vk.com/method/execute.getStartData",
                                             data={"build_ver": 3078, "need_leaderboard": 0, "func_v": -1,
                                                   "access_token": self.token, "v": "5.73", "lang": "ru",
@@ -434,7 +669,7 @@ class App(object):
 
     def showCliHelp(self):
         self.showHelp()
-        print("\n" + self.APP_NAME + " can also work in CLI mode! You can see list of available params in list below:",
+        print("\n" + APP_NAME + " can also work in CLI mode! You can see list of available params in list below:",
               "--only=<run|config> - only runs command passed instead of text interface",
               "-h, --help          - shows this help and quits",
               "--token=<token>     - overwrites token for this session (does NOT change token in config file)",
@@ -484,6 +719,7 @@ class App(object):
 
     def startGame(self):
         print("To stop press Ctrl-C")
+        self.corrects = 0
         while True:
             try:
                 # example question https://gist.githubusercontent.com/TaizoGem/1aea44b8e5fa05550f50617673809ccb/raw/a93b1b060a595142c8ed13111a5e56f4e1afe6ee/aklever.test.json
@@ -504,6 +740,17 @@ class App(object):
                         continue
                     question = google.genQuestion()
                     self.displayQuestion(question, google)
+                    while True:
+                        answrsp = requests.post("https://api.vk.com/method/streamQuiz.getCurrentStatus",
+                                                            data={"access_token": self.token, "v": "5.73", "lang": "ru",
+                                                                  "https": 1}).json()["response"]["question"]
+                        try:
+                            correct = answrsp["right_answer_id"]
+                            self.displayQuestion(question, google, False, correct)
+                            if int(question.best[0])-1 == correct:
+                                self.corrects += 1
+                        except KeyError:
+                            time.sleep(1)
                 else:
                     self.logger.debug("No question, waiting..")
                     time.sleep(1)
@@ -514,9 +761,9 @@ class App(object):
                 pass
 
     def showHelp(self):
-        print("This is " + self.APP_NAME + ", bot for VK Clever, quiz with money prizes by VK Team\n"
+        print("This is " + APP_NAME + ", bot for VK Clever, quiz with money prizes by VK Team\n"
                                            "Coded by TaizoGem, source is available at:\ngithub.com/TaizoGem/AKlever\n"
-                                           "Current version:", self.VERSION,
+                                           "Current version:", VERSION,
               "\n\nAvailable commands:\n"
               "?, h        - display this menu\n"
               "run, start  - start working\n"
@@ -526,12 +773,19 @@ class App(object):
               "vidinfo     - information about current video\n"
               "config      - configure application")
 
-    def displayQuestion(self, question: KleverQuestion, googler: KleverGoogler, is_custom: bool = False):
+    def displayQuestion(self, question: KleverQuestion, googler: KleverGoogler, is_custom: bool = False, correct=-1):
         print("Question " + str(question.id) + ":", question.question)
         print("==============================\n")
         for i in range(3):
-            print(("[~]" if i == int(question.best[0]) - 1 else "[ ]"), "Answer " + str(i + 1) + ":",
+            sign = "[ ]"
+            if i == int(question.best[0])-1:
+                sign = "[~]"
+            if i == correct:
+                sign = "[x]"
+            print(sign, "Answer " + str(i + 1) + ":",
                   str(question.answers[i]))
+            print("Bot status: " + ("" if int(question.best[0]) - 1 == correct else "in") + "correct, " + \
+                       str(self.corrects) + "/12")
         print("\n==============================")
         if self.config["Config"]["debug_mode"] in ("basic", "verbose"):
             print("Query for custom question:\n" + str(question))
@@ -540,18 +794,21 @@ class App(object):
             message = "Question " + str(question.id) + ": " + question.question
             message += "\n==============================\n"
             for i in range(3):
+                sign = "`[ ]`"
                 if i == int(question.best[0]) - 1:
-                    message += "\n`[~]`" + " Answer " + str(i + 1) + ": " + str(question.answers[i])
-                else:
-                    message += "\n`[ ]`" + " Answer " + str(i + 1) + ": " + str(question.answers[i])
+                    sign = "`[~]`"
+                if i == correct:
+                    sign = "`[x]`"
+                message += "\n" + sign + " Answer " + str(i + 1) + ": " + str(question.answers[i])
             message += "\n\n==============================\n"
+            message += "Bot status: " + ("" if int(question.best[0]) - 1 == correct else "in") + "correct, " + \
+                       str(self.corrects) + "/12"
             try:
-                a = requests.post(
+                requests.post(
                     "https://api.telegram.org/bot" + self.config["Social"]["telegram_token"] + "/sendMessage",
                     json=dict(chat_id="@" + self.config["Social"]["telegram_channel"],
                               text=message,
                               parse_mode="markdown"), proxies=self.proxies)
-                print(a.json())
             except requests.exceptions.InvalidSchema:
                 print("Unable to send message to channel because socks support is not installed")
         if self.config["Config"]["answer_ui"] == "yes":
@@ -586,18 +843,21 @@ class App(object):
                     message = "Question " + str(question.id) + ": " + question.question
                     message += "\n==============================\n"
                     for i in range(3):
+                        sign = "`[ ]`"
                         if i == int(question.best[0]) - 1:
-                            message += "\n`[~]`" + " Answer " + str(i + 1) + ": " + str(question.answers[i])
-                        else:
-                            message += "\n`[ ]`" + " Answer " + str(i + 1) + ": " + str(question.answers[i])
+                            sign = "`[~]`"
+                        if i == correct:
+                            sign = "`[x]`"
+                        message += "\n" + sign + " Answer " + str(i + 1) + ": " + str(question.answers[i])
                     message += "\n\n==============================\n"
+                    message += "Bot status: " + ("" if int(question.best[0]) - 1 == correct else "in") + "correct, " + \
+                               str(self.corrects) + "/12"
                     try:
-                        a = requests.post(
+                        requests.post(
                             "https://api.telegram.org/bot" + self.config["Social"]["telegram_token"] + "/sendMessage",
                             json=dict(chat_id="@" + self.config["Social"]["telegram_channel"],
                                       text=message,
                                       parse_mode="markdown"), proxies=self.proxies)
-                        print(a.json())
                     except requests.exceptions.InvalidSchema:
                         print("Unable to send message to channel because socks support is not installed")
         elif not is_custom:
@@ -606,7 +866,7 @@ class App(object):
     def mainloop(self):
         while True:
             try:
-                action = input("[? for help] " + self.APP_NAME + " > ").lower()
+                action = input("[? for help] " + APP_NAME + " > ").lower()
                 if action not in self.ACTIONS:
                     print("Invalid action, enter ? or h for help")
                     continue
@@ -614,8 +874,6 @@ class App(object):
                     self.showHelp()
                 elif action in ("run", "start"):
                     self.startGame()
-                elif action == "vvp":
-                    self.startVVP()
                 elif action in ("e", "exit", "q"):
                     sys.exit()
                 elif action in ("custom", "c"):
@@ -643,11 +901,11 @@ class App(object):
 
 
 def main():
-    window = App()
-    window.parseArgs(sys.argv)
-    window.getToken()
-    window.getStartData()
-    window.mainloop()
+    a = ""
+    print("What bot would you like to start?")
+    clever = CleverBot()
+    clever.parseArgs(sys.argv)
+    clever.mainloop()
 
 
 if __name__ == '__main__':

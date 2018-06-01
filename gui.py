@@ -10,7 +10,6 @@ import sys
 import time
 import urllib.request, urllib.parse
 import requests
-from klever_utils import *
 try:
     from selenium import webdriver, common
 except ImportError:

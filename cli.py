@@ -215,7 +215,7 @@ class KleverGoogler():
                 out += newyandex
             return out
         except Exception as e:
-            logger.error("Exception occurred while trying to search:" + str(e))
+            logger.error("  Exception occurred while trying to search:" + str(e))
             return ""
 
     def search(self):

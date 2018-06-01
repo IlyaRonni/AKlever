@@ -588,7 +588,7 @@ class CleverBot(object):
                   "and paste url or token here\n -> If you already have a token, just press E before enter" if not force
                   else "E if you already have token")
             while True:
-                if input("[PRESS ENTER NO OPEN AUTH PAGE]") not in ("e", "E", "У", "у"):
+                if input("[PRESS ENTER TO OPEN AUTH PAGE]") not in ("e", "E", "У", "у"):
                     try:
                         webbrowser.open(
                             "https://oauth.vk.com/authorize?client_id=6334949&display=page&scope=friends,offline,video&response_type=token&v=5.73")

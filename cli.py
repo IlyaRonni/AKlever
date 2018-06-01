@@ -798,7 +798,6 @@ class CleverBot(object):
         if correct != -1:
             print("Bot status: " + ("" if int(question.best[0]) - 1 == correct else "in") + "correct, " + \
                 str(self.corrects) + "/12")
-        print("\n==============================")
         if self.config["Config"]["debug_mode"] in ("basic", "verbose"):
             print("Query for custom question:\n" + str(question))
             print("Optimized question:", question.optimized)

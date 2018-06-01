@@ -184,7 +184,7 @@ class KleverGoogler():
 
 
 
-    def doReverse(self, prev_results):
+    def doReverse(self, prev_results=(0,0,0)):
         self.logger.info("doing reverse search..")
         self.answers = []
         i = 0

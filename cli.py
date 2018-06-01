@@ -521,7 +521,7 @@ class App(object):
         if self.config["Config"]["debug_mode"] in ("basic", "verbose"):
             print("Query for custom question:\n" + str(question))
             print("Optimized question:", question.optimized)
-        if self.config["Social"]["telegram_auto"] == "yes":
+        if self.config["Social"]["telegram_auto"] == "on":
             message = "Question " + str(question.id) + ": "+  question.question
             message += "==============================\n"
             for i in range(3):
@@ -530,7 +530,7 @@ class App(object):
                 else:
                     message += "\n`[ ]`" + "Answer "+str(i+1)+": " + str(question.answers[i])
             message += "\n\n==============================\n"
-            tg = requests.get("https://api.telegram.org/bot"+self.config["Social"]["telegram_token"]+"/sendMessage?chat_id="+self.config["Social"]["telegram_channel"]+"&text="+message+"&parse_mode=markdown", proxies=self.proxies)
+            requests.post("https://api.telegram.org/bot"+self.config["Social"]["telegram_token"]+"/sendMessage", data=dict(chat_id=self.config["Social"]["telegram_channel"], text=message, parse_mode="markdown"), proxies=self.proxies)
         if self.config["Config"]["answer_ui"] == "yes":
             while True:
                 print("0. Continue")

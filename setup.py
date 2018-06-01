@@ -76,5 +76,5 @@ setup(
     license='github.com/TaizoGem/AKlever',
     author='TaizoGem',
     author_email='',
-    description='Bot for VK Clever and other trivias, written in python'
+    description='Bot for VK Clever and other trivias, written in python', install_requires=['lomond']
 )

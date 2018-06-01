@@ -11,15 +11,20 @@ import requests.exceptions
 import logging
 import webbrowser
 import configparser
+
 try:
     from lomond import WebSocket
+
+    WS_INSTALLED = True
 except ImportError:
     print("WebSocket module is not installed. VVP, HQ and CS won't be available.", file=sys.stderr)
+    WS_INSTALLED = False
 IS_EXE = __file__[:-4] == ".exe"
 APP_NAME = "AKlever"  # if you want you can change name of bot here - it will change everywhere
 VERSION = 0.94
 logging.basicConfig(format='[%(levelname)s] %(message)s')
 logger = logging.getLogger(APP_NAME)
+
 
 def isInt(str):
     try:
@@ -40,13 +45,15 @@ def checkUpdates():
         print("New version is available, would you like to auto-update?")
         if input("[Y/n] ") not in ("n", "N", "П", "п"):
             if IS_EXE:
-                newversion = requests.get("https://github.com/TaizoGem/AKlever/releases/download/v"+v+"/aklever.exe")
+                newversion = requests.get(
+                    "https://github.com/TaizoGem/AKlever/releases/download/v" + v + "/aklever.exe")
                 if newversion.status_code == 200:
                     import string
                     filename = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6)) + ".exe"
                     with open(filename, "wb") as f:
-                        f.write(newversion.content)  #                \/\/\/\/\/\/\/ waiting 3 seconds before copying
-                    os.system("start \"updating aklever\" cmd /c \"ping 127.0.0.1 -n 3 & move " + filename + " " + __file__ + " & start " + __file__ + "\"")
+                        f.write(newversion.content)  # \/\/\/\/\/\/\/ waiting 3 seconds before copying
+                    os.system(
+                        "start \"updating aklever\" cmd /c \"ping 127.0.0.1 -n 3 & move " + filename + " " + __file__ + " & start " + __file__ + "\"")
                 else:
                     print("It seems that you are using .exe version of bot, and latest version is not yet compiled.\n"
                           "Can't proceed.")
@@ -113,72 +120,73 @@ class KleverQuestion(object):
 
 class KleverGoogler():
     FILTERED_WORDS = ("сколько", "как много", "вошли в историю как", "какие", "как называется", "чем является",
-                      "что из этого", "(у |)как(ой|ого|их) из( этих|)", "какой из героев", "традиционно", "согласно", " - ",
+                      "что из этого", "(у |)как(ой|ого|их) из( этих|)", "какой из героев", "традиционно", "согласно",
+                      " - ",
                       "чем занимается", "чья профессия", "состоялся", "из фильма", "что из этого",
                       "какой", "является", "в мире", "и к", "термин(ов|ы|)", "относ(и|я)тся", "в какой",
-                      "у как(ого|ой|их)", "согласно", "на каком", "состоялся", "по численности", "не", "ни")
+                      "у как(ого|ой|их)", "согласно", "на каком", "состоялся", "по численности", " не ", " ни ")
     OPTIMIZE_DICT = {
         "в каком году": "когда",
-        "какого животного": "кого", ###############################
-        "один": "1",                ###############################
-        "одна": "1",                ###############################
-        "одно": "1",                ####        #######        ####
-        "два": "2",                 ####        #######        ####
-        "двое": "2",                ####        #######        ####
-        "две": "2",                 ####        #######        ####
-        "три": "3",                 ###############################
-        "трое": "3",                ##############   ##############
-        "четыре": "4",              ##############   ##############
-        "четверо": "4",             ##############   ##############
-        "пять": "5",                ###############################
-        "пятеро": "5",              ########               ########
-        "шесть": "6",               ########               ########
-        "шестеро": "6",             ####    ###############   #####
-        "семь": "7",                ####    ###############   #####
-        "семеро": "7",              ###############################
-        "восемь": "8",              ###############################
-        "девять": "9",              #####                     #####
-        "десять": "10",             #####                     #####
-        "одиннадцать": "11",        #############     #############
-        "двенадцать": "12",         #############     #############
-        "тринадцать": "13",         #############     #############
-        "четырнадцать": "14",       #############     #############
-        "пятнадцать": "15",         #############     #############
-        "шестнадцать": "16",        #############     #############
-        "семнадцать": "17",         #############     #############
-        "восемнадцать": "18",       #############     #############
-        "девятнадцать": "19",       ###############################
-        "двадцать": "20",           ###############################
-        "тридцать": "30",           ###############################
-        "сорок": "40",              ####         #####         ####
-        "пятьдесят": "50",          ####  ############  ###########
-        "шестьдесят": "60",         ####  ############  ###########
-        "семьдесят": "70",          ####  #####  #####  #####  ####
-        "восемьдесят": "80",        ####  ###### #####  ###### ####
-        "девяносто": "90",          ####  ###### #####  ###### ####
-        "сто": "100",               ####         #####         ####
-        "двести": "200",            ###############################
-        "триста": "300",            ###############################
-        "четыреста": "400",         ###############################
-        "пятьсот": "500",           ###############################
-        "шестьсот": "600",          ###############################
-        "семьсот": "700",           ###############################
-        "восемьсот": "800",         ######                   ######
-        "девятсот": "900",          ######  if you use this  ######
-        "тысача": "1000",           ######    please leave   ######
-        " тысячи": "000",           ######  copyright notice ######
-        " тысяч": "000",            ######                   ######
-        "миллион": "1000000",       ######   (c) TaizoGem    ######
-        " миллиона": "000000",      ###############################
-        " миллионов": "000000"      ###############################
+        "какого животного": "кого",  ###############################
+        "один": "1",  ###############################
+        "одна": "1",  ###############################
+        "одно": "1",  ####        #######        ####
+        "два": "2",  ####        #######        ####
+        "двое": "2",  ####        #######        ####
+        "две": "2",  ####        #######        ####
+        "три": "3",  ###############################
+        "трое": "3",  ##############   ##############
+        "четыре": "4",  ##############   ##############
+        "четверо": "4",  ##############   ##############
+        "пять": "5",  ###############################
+        "пятеро": "5",  ########               ########
+        "шесть": "6",  ########               ########
+        "шестеро": "6",  ####    ###############   #####
+        "семь": "7",  ####    ###############   #####
+        "семеро": "7",  ###############################
+        "восемь": "8",  ###############################
+        "девять": "9",  #####                     #####
+        "десять": "10",  #####                     #####
+        "одиннадцать": "11",  #############     #############
+        "двенадцать": "12",  #############     #############
+        "тринадцать": "13",  #############     #############
+        "четырнадцать": "14",  #############     #############
+        "пятнадцать": "15",  #############     #############
+        "шестнадцать": "16",  #############     #############
+        "семнадцать": "17",  #############     #############
+        "восемнадцать": "18",  #############     #############
+        "девятнадцать": "19",  ###############################
+        "двадцать": "20",  ###############################
+        "тридцать": "30",  ###############################
+        "сорок": "40",  ####         #####         ####
+        "пятьдесят": "50",  ####  ############  ###########
+        "шестьдесят": "60",  ####  ############  ###########
+        "семьдесят": "70",  ####  #####  #####  #####  ####
+        "восемьдесят": "80",  ####  ###### #####  ###### ####
+        "девяносто": "90",  ####  ###### #####  ###### ####
+        "сто": "100",  ####         #####         ####
+        "двести": "200",  ###############################
+        "триста": "300",  ###############################
+        "четыреста": "400",  ###############################
+        "пятьсот": "500",  ###############################
+        "шестьсот": "600",  ###############################
+        "семьсот": "700",  ###############################
+        "восемьсот": "800",  ######                   ######
+        "девятсот": "900",  ######  if you use this  ######
+        "тысача": "1000",  ######    please leave   ######
+        " тысячи": "000",  ######  copyright notice ######
+        " тысяч": "000",  ######                   ######
+        "миллион": "1000000",  ######   (c) TaizoGem    ######
+        " миллиона": "000000",  ###############################
+        " миллионов": "000000"  ###############################
     }
 
-    def __init__(self, question: str, answer1: str, answer2: str, answer3: str, sent_time: int, num: int):
+    def __init__(self, question: str, answers, sent_time: int, num: int):
         self._question = question
         self.__question = self.optimizeString(question)
         self.answers = []
-        self.__answers = [self.optimizeString(a) for a in (answer1, answer2, answer3)]
-        self.newquestion = self.__question+'("'+answer1+'" | "'+answer2+'" | "'+answer3+'")'
+        self.__answers = [self.optimizeString(a) for a in answers]
+        self.newquestion = self.__question + '("' + '" | "'.join(answers) + '")'
         self.conn = requests.Session()
         self.sent_time = sent_time
         self.number = num
@@ -188,7 +196,8 @@ class KleverGoogler():
             print("Performing search for", query, end="\r")
             google = self.conn.get("https://www.google.ru/search?q=" + urllib.parse.quote_plus(query)).text.lower()
             yandex = self.conn.get("https://www.yandex.ru/search/?text=" + urllib.parse.quote_plus(query)).text.lower()
-            newyandex = self.conn.get("https://www.yandex.ru/search/?text=" + urllib.parse.quote_plus(newquery)).text.lower() if newquery else ""
+            newyandex = self.conn.get("https://www.yandex.ru/search/?text=" + urllib.parse.quote_plus(
+                newquery)).text.lower() if newquery else ""
             ddg = self.conn.get("https://duckduckgo.com/?q=" + urllib.parse.quote_plus(query) + "&format=json").json()
             out = ""
             try:
@@ -197,7 +206,7 @@ class KleverGoogler():
             except:
                 pass
             out += ddg["Abstract"]
-            if not "Our systems have detected unusual traffic from your computer network" in google\
+            if not "Our systems have detected unusual traffic from your computer network" in google \
                     and not "support.google.com/websearch/answer/86640" in google:
                 out += google
             if not "{\"captchaSound\"" in yandex:
@@ -216,7 +225,8 @@ class KleverGoogler():
             for answer in self.__answers:
                 current_count = 0
                 for part in answer.split(" и "):
-                    current_count += len(re.findall("(:|-|!|.|,|\?|;|\"|'|`| )" + part.lower() + "(:|-|!|.|,|\?|;|\"|'|`| )", response))
+                    current_count += len(
+                        re.findall("(:|-|!|.|,|\?|;|\"|'|`| )" + part.lower() + "(:|-|!|.|,|\?|;|\"|'|`| )", response))
                     logger.debug("processed " + part + ", found " + str(current_count) + " occs in total")
                 self.answers.append(KleverAnswer(answer, current_count))
         else:
@@ -224,7 +234,8 @@ class KleverGoogler():
             for answer in self.__answers:
                 current_count = 0
                 for part in answer.split(" "):
-                    current_count += len(re.findall("(:|-|!|.|,|\?|;|\"|'|`| )" + part.lower() + "(:|-|!|.|,|\?|;|\"|'|`| )", response))
+                    current_count += len(
+                        re.findall("(:|-|!|.|,|\?|;|\"|'|`| )" + part.lower() + "(:|-|!|.|,|\?|;|\"|'|`| )", response))
                     logger.debug("processed " + part + ", found " + str(current_count) + " occs in total")
                 self.answers.append(KleverAnswer(answer, current_count))
         a = [b.coincidences for b in self.answers]
@@ -232,9 +243,7 @@ class KleverGoogler():
             self.doReverse(a)
         del a
 
-
-
-    def doReverse(self, prev_results=(0,0,0)):
+    def doReverse(self, prev_results=(0, 0, 0)):
         logger.info("doing reverse search..")
         self.answers = []
         i = 0
@@ -256,7 +265,7 @@ class KleverGoogler():
     def optimizeString(self, base):
         base = base.lower()
         base = re.sub("[\'@<!«»?,.]", "", base)
-        base = re.sub("("+"|".join(self.FILTERED_WORDS)+")( |)", "", base)
+        base = re.sub("(" + "|".join(self.FILTERED_WORDS) + ")( |)", "", base)
         pattern = re.compile(r'\b(' + '|'.join(self.OPTIMIZE_DICT.keys()) + r')\b')
         base = pattern.sub(lambda x: self.OPTIMIZE_DICT[x.group()], base)
         logger.info("optimized string:" + base)
@@ -264,7 +273,8 @@ class KleverGoogler():
 
     def getLemmas(self, base):
         out = []
-        for a in requests.get("http://www.solarix.ru/php/lemma-provider.php?query=" + urllib.parse.quote_plus(base)).text.split(" "):
+        for a in requests.get(
+                "http://www.solarix.ru/php/lemma-provider.php?query=" + urllib.parse.quote_plus(base)).text.split(" "):
             a = a.replace("\r\n", "")
             if a:
                 out.append(a)
@@ -275,8 +285,8 @@ class CleverBot(object):
     GAME_STATE_PLANNED = "Planned"
     GAME_STATE_STARTED = "Started"
     GAME_STATE_FINISHED = "Finished"
-    ACTIONS = ("?", "h", "run", "start", "auth", "custom", "exit", "e", "settings", "config", "q", "c", "vidinfo", "r", "vvp")
-
+    ACTIONS = (
+        "?", "h", "run", "start", "auth", "custom", "exit", "e", "settings", "config", "q", "c", "vidinfo", "r", "vvp")
 
     def __init__(self):
         super().__init__()
@@ -326,7 +336,7 @@ class CleverBot(object):
         try:
             q = q.split(":")
             e = q[1].split("#")
-            google = KleverGoogler(q[0], e[0], e[1], e[2], 0, 0)
+            google = KleverGoogler(q[0], e, 0, 0)
             google.search()
             g = google.genQuestion()
             self.displayQuestion(g, google, True)
@@ -731,9 +741,8 @@ class CleverBot(object):
                 if response:
                     print("Received question, thinking...", end="\r")
                     logger.debug("got question: " + response["text"])
-                    google = KleverGoogler(response["text"], response["answers"][0]['text'],
-                                           response["answers"][1]['text'],
-                                           response["answers"][2]['text'], response["sent_time"], response["number"])
+                    google = KleverGoogler(response["text"], [response["answers"][i]['text'] for i in range(3)],
+                                           response["sent_time"], response["number"])
                     try:
                         google.search()
                     except ConnectionResetError as e:
@@ -743,15 +752,16 @@ class CleverBot(object):
                     self.displayQuestion(question, google)
                     while True:
                         answrsp = requests.post("https://api.vk.com/method/streamQuiz.getCurrentStatus",
-                                                            data={"access_token": self.token, "v": "5.73", "lang": "ru",
-                                                                  "https": 1}).json()["response"]["question"]
+                                                data={"access_token": self.token, "v": "5.73", "lang": "ru",
+                                                      "https": 1}).json()["response"]["question"]
                         try:
                             correct = answrsp["right_answer_id"]
                             self.displayQuestion(question, google, False, correct)
-                            if int(question.best[0])-1 == correct:
+                            if int(question.best[0]) - 1 == correct:
                                 self.corrects += 1
+                            break
                         except KeyError:
-                            time.sleep(1)
+                            time.sleep(2)
                 else:
                     logger.debug("No question, waiting..")
                     time.sleep(1)
@@ -763,8 +773,8 @@ class CleverBot(object):
 
     def showHelp(self):
         print("This is " + APP_NAME + ", bot for VK Clever, quiz with money prizes by VK Team\n"
-                                           "Coded by TaizoGem, source is available at:\ngithub.com/TaizoGem/AKlever\n"
-                                           "Current version:", VERSION,
+                                      "Coded by TaizoGem, source is available at:\ngithub.com/TaizoGem/AKlever\n"
+                                      "Current version:", VERSION,
               "\n\nAvailable commands:\n"
               "?, h        - display this menu\n"
               "run, start  - start working\n"
@@ -779,14 +789,15 @@ class CleverBot(object):
         print("==============================\n")
         for i in range(3):
             sign = "[ ]"
-            if i == int(question.best[0])-1:
+            if i == int(question.best[0]) - 1:
                 sign = "[~]"
             if i == correct:
                 sign = "[x]"
             print(sign, "Answer " + str(i + 1) + ":",
                   str(question.answers[i]))
+        if correct != -1:
             print("Bot status: " + ("" if int(question.best[0]) - 1 == correct else "in") + "correct, " + \
-                       str(self.corrects) + "/12")
+                str(self.corrects) + "/12")
         print("\n==============================")
         if self.config["Config"]["debug_mode"] in ("basic", "verbose"):
             print("Query for custom question:\n" + str(question))
@@ -901,12 +912,83 @@ class CleverBot(object):
                     sys.exit()
 
 
+class VVPBot:
+    SERVERS = (
+        "ws://ws-tosno1.trivia.incrdbl.me:8888/socket",
+        "ws://ws-tosno2.trivia.incrdbl.me:8888/socket",
+        "ws://ws-tosno3.trivia.incrdbl.me:8888/socket",
+        "ws://ws-tosno4.trivia.incrdbl.me:8888/socket",
+        "ws://ws-tosno5.trivia.incrdbl.me:8888/socket",
+        "ws://ws-tosno6.trivia.incrdbl.me:8888/socket",
+        "ws://ws-luga1.trivia.incrdbl.me:8888/socket",
+        "ws://ws-luga2.trivia.incrdbl.me:8888/socket",
+        "ws://ws-luga3.trivia.incrdbl.me:8888/socket",
+        "ws://ws-luga4.trivia.incrdbl.me:8888/socket",
+        "ws://ws-luga5.trivia.incrdbl.me:8888/socket",
+        "ws://ws-luga6.trivia.incrdbl.me:8888/socket"
+    )
+
+    def mainloop(self):
+        print("to start press enter and to stop press ctrl+c")
+        input("<press enter>")
+        srv = random.choice(self.SERVERS)
+        logger.debug(srv)
+        conn = WebSocket(srv)
+        corrects = 0
+        last_answer = None
+        for msg in conn.connect():
+            if msg.name == "text":
+                a = json.loads(msg.text)
+                if a["method"] == "round_question":
+                    b = a["params"]["answers"]
+                    googler = KleverGoogler(a["params"]["text"], [b[i]["text"] for i in range(4)],
+                                            int(time.time()), a["params"]["number"])
+                    googler.search()
+                    c = googler.genQuestion()
+                    last_answer = int(c.best[0])
+                    msg = ""
+                    msg += "Question " + str(c.id) + ": " + c.question
+                    msg += "\n==============================\n\n"
+                    for i in range(4):
+                        print(("[~]" if i + 1 == last_answer else "[ ]"), "Answer " + str(i + 1) + ":",
+                              str(c.answers[i]))
+                    print("\n==============================")
+                elif a["method"] == "round_result":
+                    b = a["params"]
+                    c = a["params"]["answers"]
+                    print("Answer for question %s: %s" % (b["number"], b["text"]))
+                    print("==============================\n")
+                    correct = -1
+                    for q in c:
+                        d = False
+                        if q["correct"]:
+                            d = True
+                            correct = q["number"]
+                        print(("[x]" if d else "[ ]"), "Answer %s: %s" % (q["number"], q["text"]))
+                    print("\n==============================")
+                    if last_answer == correct:
+                        corrects += 1
+                    print("Bot status:", ("" if last_answer == correct else "in") + "correct,",
+                          "%s/%s" % (str(corrects), b["number"]))
+
+            elif msg.name == "disconnected":
+                print("disconnected")
+
+
 def main():
-    a = ""
     print("What bot would you like to start?")
-    clever = CleverBot()
-    clever.parseArgs(sys.argv)
-    clever.mainloop()
+    print("1. VK Clever")
+    print("2. VVP")
+    a = input("[1-2] > ")
+    while isInt(a) not in range(3):
+        a = input("[1-2] > ")
+    if a == '1':
+        clever = CleverBot()
+        clever.parseArgs(sys.argv)
+        clever.mainloop()
+    elif a == '2' and WS_INSTALLED:
+        VVP = VVPBot()
+        VVP.mainloop()
 
 
 if __name__ == '__main__':

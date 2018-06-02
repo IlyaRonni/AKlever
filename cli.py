@@ -103,23 +103,25 @@ def checkUpdates():
     print(CHECKING_FOR_UPDATES, end="\r")
     try:
         v = requests.get("https://raw.githubusercontent.com/TaizoGem/AKlever/master/version").text
-        float(v)
+        v = float(v)
     except:
         print(CHECKING_FOR_UPDATES_FAILED % VERSION)
         return
-    if float(v) > float(VERSION):
+    if v > float(VERSION):
         print(NEW_VERSION_AVAILABLE)
         if input(Yn_PROMPT) not in n_ARRAY:
             if IS_EXE:
                 newversion = requests.get(
-                    "https://github.com/TaizoGem/AKlever/releases/download/v" + v + "/aklever.exe")
+                    "https://github.com/TaizoGem/AKlever/releases/download/v"+str(v)+"/aklever.exe")
+                logger.debug("status code is " + str(newversion.status_code))
                 if newversion.status_code == 200:
                     import string
-                    filename = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6)) + ".exe"
+                    oldname = sys.executable.split("\\")[-1]
+                    filename = ''.join(random.choices(string.ascii_lowercase + string.digits, k=6)) + ".exe"
                     with open(filename, "wb") as f:
                         f.write(newversion.content)  # \/\/\/\/\/\/\/ waiting 3 seconds before copying
                     os.system(
-                        "start \"updating aklever\" cmd /c \"ping 127.0.0.1 -n 3 > nul & move " + filename + " " + __file__ + " & start " + __file__ + "\"")
+                        "start \"updating aklever\" cmd /c \"ping 127.0.0.1 -n 3 > nul & move " + filename + " " + oldname + " & start " + oldname + "\"")
                     exit()
                 else:
                     print(EXE_NOT_YET_COMPILED)

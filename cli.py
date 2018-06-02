@@ -12,7 +12,7 @@ import logging
 import webbrowser
 import configparser
 
-IS_EXE = getattr( sys, 'frozen', False )
+IS_EXE = getattr(sys, 'frozen', False)
 APP_NAME = "AKlever"  # if you want you can change name of bot here - it will change everywhere
 VERSION = 0.95
 logging.basicConfig(format='[%(levelname)s] %(message)s')
@@ -784,7 +784,7 @@ class CleverBot(object):
     def displayQuestion(self, question: KleverQuestion, googler: KleverGoogler, is_custom: bool = False, correct=-1):
         message = QUESTION % (str(question.id), question.question)
         message += "\n==============================\n"
-        for i in range(3):
+        for i in range(len(question.answers)):
             sign = "`[ ]`"
             if i == int(question.best[0]) - 1:
                 sign = "`[~]`"

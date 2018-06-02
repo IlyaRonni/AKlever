@@ -12,7 +12,7 @@ import logging
 import webbrowser
 import configparser
 
-IS_EXE = __file__[:-4] == ".exe"
+IS_EXE = __file__[-4:] == ".exe"
 APP_NAME = "AKlever"  # if you want you can change name of bot here - it will change everywhere
 VERSION = 0.95
 logging.basicConfig(format='[%(levelname)s] %(message)s')
@@ -119,7 +119,8 @@ def checkUpdates():
                     with open(filename, "wb") as f:
                         f.write(newversion.content)  # \/\/\/\/\/\/\/ waiting 3 seconds before copying
                     os.system(
-                        "start \"updating aklever\" cmd /c \"ping 127.0.0.1 -n 3 & move " + filename + " " + __file__ + " & start " + __file__ + "\"")
+                        "start \"updating aklever\" cmd /c \"ping 127.0.0.1 -n 3 > nul & move " + filename + " " + __file__ + " & start " + __file__ + "\"")
+                    exit()
                 else:
                     print(EXE_NOT_YET_COMPILED)
             else:
@@ -131,7 +132,7 @@ def checkUpdates():
                     with open(filename, "wb") as f:
                         f.write(newversion.content)
                     os.system(
-                        "start \"updating aklever\" cmd /c \"ping 127.0.0.1 -n 3 & move " + filename + " " + __file__ + " & python " + __file__ + "\"")
+                        "start \"updating aklever\" cmd /c \"ping 127.0.0.1 -n 3 > nul & move " + filename + " " + __file__ + " & python " + __file__ + "\"")
                 else:
                     print(UPDATE_FAILED % newversion.status_code)
 

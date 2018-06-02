@@ -12,7 +12,7 @@ import logging
 import webbrowser
 import configparser
 
-IS_EXE = __file__[-4:] == ".exe"
+IS_EXE = getattr( sys, 'frozen', False )
 APP_NAME = "AKlever"  # if you want you can change name of bot here - it will change everywhere
 VERSION = 0.95
 logging.basicConfig(format='[%(levelname)s] %(message)s')

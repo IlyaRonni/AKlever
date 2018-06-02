@@ -12,18 +12,76 @@ import logging
 import webbrowser
 import configparser
 
-try:
-    from lomond import WebSocket
-
-    WS_INSTALLED = True
-except ImportError:
-    print("WebSocket module is not installed. VVP, HQ and CS won't be available.", file=sys.stderr)
-    WS_INSTALLED = False
 IS_EXE = __file__[:-4] == ".exe"
 APP_NAME = "AKlever"  # if you want you can change name of bot here - it will change everywhere
-VERSION = 0.94
+VERSION = 0.95
 logging.basicConfig(format='[%(levelname)s] %(message)s')
 logger = logging.getLogger(APP_NAME)
+config = configparser.ConfigParser()
+def saveConfig():
+    with open("config.ak", "w") as config_file:
+        config.write(config_file)
+if os.path.exists("config.ak"):
+    logger.debug("config exists")
+    config.read("config.ak")
+else:
+    logger.debug("creating config")
+    config.add_section("Config")
+    config.add_section("Social")
+    config["Social"]["telegram"] = "off"
+    config["Social"]["telegram_token"] = ""
+    config["Social"]["telegram_channel"] = ""
+    config["Social"]["telegram_proxy"] = ""
+    config["Social"]["telegram_auto"] = ""
+    config["Config"]["debug_mode"] = "disabled"
+    config["Config"]["updates"] = "on"
+    config["Config"]["answer_ui"] = "off"
+    saveConfig()
+config.read("config.ak")
+proxies = {"http": "socks5h://" + config["Social"]["telegram_proxy"],"https": "socks5h://" + config["Social"]["telegram_proxy"]} if config["Social"]["telegram_proxy"] else {}
+vk_token = ""
+try:
+    if config["Config"]["lang"] == "russian":
+        from strings_ru import *
+    else:
+        from strings_en import *
+except KeyError:
+    config["Config"]["lang"] = "english"
+    saveConfig()
+    from strings_en import *
+try:
+    from lomond import WebSocket
+    WS_INSTALLED = True
+except ImportError:
+    print(WEBSOCKET_NOT_INSTALLED, file=sys.stderr)
+    WS_INSTALLED = False
+
+
+def send_to_telegram(message):
+    try:
+        requests.post(
+            "https://api.telegram.org/bot" + config["Social"]["telegram_token"] + "/sendMessage",
+            json=dict(chat_id="@" + config["Social"]["telegram_channel"],
+                      text=message,
+                      parse_mode="markdown"), proxies=proxies)
+    except requests.exceptions.InvalidSchema:
+        print(SOCKS_NOT_INSTALLED_FAIL)
+
+
+def runCustom(q=""):
+    if q == "":
+        print(CUSTOM_QUESTION_INFO)
+        print(CUSTOM_QUESTION_FORMAT)
+        q = input("> ")
+    try:
+        q = q.split(":")
+        e = q[1].split("#")
+        google = KleverGoogler(q[0], e, 0, 0)
+        google.search()
+        g = google.genQuestion()
+        CleverBot.displayQuestion(CleverBot(), g, google, True)
+    except IndexError:
+        print(MALFORMED_INPUT)
 
 
 def isInt(str):
@@ -33,17 +91,25 @@ def isInt(str):
         return "no"
 
 
+def getTokenInfo(token):
+        a = requests.get("https://api.vk.com/method/users.get?v=5.73&access_token=" + token).json()["response"][0]
+        try:
+            return str(a["id"]) + " > " + a["first_name"] + " " + a["last_name"]
+        except KeyError:
+            return NO_ACCOUNT
+
+
 def checkUpdates():
-    print("Checking for updates...", end="\r")
+    print(CHECKING_FOR_UPDATES, end="\r")
     try:
         v = requests.get("https://raw.githubusercontent.com/TaizoGem/AKlever/master/version").text
         float(v)
     except:
-        print("Unable to check for updates. Current version:", VERSION)
+        print(CHECKING_FOR_UPDATES_FAILED % VERSION)
         return
     if float(v) > float(VERSION):
-        print("New version is available, would you like to auto-update?")
-        if input("[Y/n] ") not in ("n", "N", "П", "п"):
+        print(NEW_VERSION_AVAILABLE)
+        if input(Yn_PROMPT) not in n_ARRAY:
             if IS_EXE:
                 newversion = requests.get(
                     "https://github.com/TaizoGem/AKlever/releases/download/v" + v + "/aklever.exe")
@@ -55,8 +121,7 @@ def checkUpdates():
                     os.system(
                         "start \"updating aklever\" cmd /c \"ping 127.0.0.1 -n 3 & move " + filename + " " + __file__ + " & start " + __file__ + "\"")
                 else:
-                    print("It seems that you are using .exe version of bot, and latest version is not yet compiled.\n"
-                          "Can't proceed.")
+                    print(EXE_NOT_YET_COMPILED)
             else:
                 newversion = requests.get(
                     "https://raw.githubusercontent.com/TaizoGem/AKlever/master/cli.py")
@@ -68,10 +133,279 @@ def checkUpdates():
                     os.system(
                         "start \"updating aklever\" cmd /c \"ping 127.0.0.1 -n 3 & move " + filename + " " + __file__ + " & python " + __file__ + "\"")
                 else:
-                    print("Oops, something went wrong. Can't proceed. Error code", newversion.status_code)
+                    print(UPDATE_FAILED % newversion.status_code)
 
 
-class KleverAnswer():
+def validateToken(token=None):
+        if not token:
+            token = vk_token
+        out = requests.get("https://api.vk.com/method/users.get?v=5.73&access_token=" + token).json()
+        try:
+            out["response"]
+            logger.debug("token is valid")
+            return True
+        except KeyError:
+            logger.debug("token is invalid")
+            return False
+
+
+def getToken(force=False):
+    global vk_token
+    print(GETTING_TOKEN, end="\r")
+    if vk_token and not force:
+        return
+    try:
+        token = config["Config"]["token"]
+    except KeyError:
+        token = ""
+    if token and validateToken(token) and not force:
+        logger.debug("valid token found in file: " + token)
+        vk_token = token
+        return
+    else:
+        logger.debug("token not found or is invalid, requesting..")
+        print("Hi! You are 1 step behind using this bot! Since VK Clever sends questions via VK API, we need access"
+              "\ntoken to be able to get them. It is important to use token with Clever appid.\n"
+              "To get token you just need to click enter, authenticate app in browser (if not already)\n"
+              "and paste url or token here\n -> If you already have a token, just press E before enter" if not force
+              else "E if you already have token")
+        while True:
+            if input("[PRESS ENTER TO OPEN AUTH PAGE]") not in ("e", "E", "У", "у"):
+                try:
+                    webbrowser.open(
+                        "https://oauth.vk.com/authorize?client_id=6334949&display=page&scope=friends,offline,video&response_type=token&v=5.73")
+                except Exception:
+                    print("failed to open browser, open it by yourself, please:\n"
+                          "https://oauth.vk.com/authorize?client_id=6334949&display=page&scope=friends,offline,video&response_type=token&v=5.73")
+                time.sleep(3)
+            print("Token or url:")
+            a = input("> ")
+            if "access_token" in a:
+                try:
+                    token = a.split("#access_token=")[1].split('&')[0]
+                except Exception:
+                    print("Malformed url given, please try again")
+                    continue
+                if not validateToken(token):
+                    print("Invalid token, please try again")
+                    continue
+                else:
+                    break
+            elif validateToken(a):
+                token = a
+                break
+            else:
+                print("Invalid token, please try again")
+                continue
+    vk_token = token
+    config["Config"]["token"] = token
+    saveConfig()
+
+
+def configurate():
+        edited = False
+        while True:
+            print(CONFIGURATION_INTRO % APP_NAME)
+            print("1. %s:" % DEBUG_MODE, config["Config"]["debug_mode"])
+            print("2. %s" % VK_AUTH_TOKEN)
+            print("3. %s:" % CHECK_FOR_UPDATES, config["Config"]["updates"])
+            print("4. %s" % TELEGRAM_INTEGRATION)
+            print("5. %s:" % ANSWER_UI, config["Config"]["answer_ui"])
+            print("6. %s: %s" % (LANGUAGE, CURRENT_LANG))
+            print("0. %s" % SAVE_AND_EXIT, EDITED if edited else "")
+            a = input("[0-6] > ")
+            while isInt(a) not in range(7):
+                a = input("[0-6] > ")
+            a = int(a)
+            if a == 0:
+                saveConfig()
+                return
+            elif a == 1:
+                while True:
+                    print("1.", "[x]" if config["Config"]["debug_mode"] == "disabled" else "[ ]",
+                          DEBUG_DISABLED)
+                    print("2.", "[x]" if config["Config"]["debug_mode"] == "basic" else "[ ]",
+                          DEBUG_BASIC)
+                    print("3.", "[x]" if config["Config"]["debug_mode"] == "verbose" else "[ ]",
+                          DEBUG_VERBOSE)
+                    print("\n0.", BACK)
+                    b = input("[0-3] > ")
+                    while isInt(b) not in range(4):
+                        b = input("[0-3] > ")
+                    b = int(b)
+                    if b == 0:
+                        break
+                    elif b == 1:
+                        config["Config"]["debug_mode"] = "disabled"
+                    elif b == 2:
+                        config["Config"]["debug_mode"] = "basic"
+                    elif b == 3:
+                        config["Config"]["debug_mode"] = "verbose"
+                    edited = True
+            elif a == 2:
+                while True:
+                    print(VK_AUTH_INFO)
+                    print("%s:" % CURRENT_TOKEN, vk_token[:6] + "******" + vk_token[75:])
+                    print("%s:" % CURRENT_ACCOUNT, getTokenInfo(vk_token))
+                    print("1.", CHANGE_TOKEN)
+                    print("0.", BACK)
+                    b = input("[0-1] > ")
+                    while isInt(b) not in range(2):
+                        b = input("[0-1] > ")
+                    b = int(b)
+                    if b == 0:
+                        break
+                    elif b == 1:
+                        getToken(True)
+            elif a == 3:
+                while True:
+                    print(UPDATES_INFO)
+                    print("1.", "[x]" if config["Config"]["updates"] == "on" else "[ ]", ENABLE)
+                    print("2.", "[x]" if config["Config"]["updates"] == "off" else "[ ]", DISABLE)
+                    print("0.", BACK)
+                    b = input("[0-2] > ")
+                    while isInt(b) not in range(3):
+                        b = input("[0-2] > ")
+                    b = int(b)
+                    if b == 0:
+                        break
+                    elif b == 1:
+                        config["Config"]["updates"] = "on"
+                    elif b == 2:
+                        config["Config"]["updates"] = "off"
+                    edited = True
+            elif a == 4:
+                while True:
+                    print(TELEGRAM_INTEGRATION_INFO % APP_NAME)
+                    print("1. %s:" % ENABLE, config["Social"]["telegram"])
+                    print("2. %s:" % TELEGRAM_BOT_TOKEN,
+                          config["Social"]["telegram_token"][:7] + "******" + config["Social"][
+                                                                                       "telegram_token"][38:])
+                    print("3. %s: @" + config["Social"]["telegram_channel"] % TELEGRAM_CHANNEL)
+                    print("4. %s: " + config["Social"]["telegram_proxy"] % PROXY)
+                    print("5. %s:" % TELEGRAM_AUTO_SEND, config["Social"]["telegram_auto"])
+                    print("0.", BACK)
+                    b = input("[0-5] > ")
+                    while isInt(b) not in range(6):
+                        b = input("[0-5] > ")
+                    b = int(b)
+                    if b == 0:
+                        break
+                    elif b == 1:
+                        while True:
+                            print(TELEGRAM_ENABLE_DISABLE)
+                            print("1.", "[x]" if config["Social"]["telegram"] == "on" else "[ ]", ENABLE)
+                            print("2.", "[x]" if config["Social"]["telegram"] == "off" else "[ ]", DISABLE)
+                            print("0.", BACK)
+                            c = input("[0-2] > ")
+                            while isInt(b) not in range(3):
+                                c = input("[0-2] > ")
+                            c = int(c)
+                            if c == 0:
+                                break
+                            elif c == 1:
+                                config["Social"]["telegram"] = "on"
+                            elif c == 2:
+                                config["Social"]["telegram"] = "off"
+                            edited = True
+                    elif b == 2:
+                        while True:
+                            print(TELEGRAM_BOT_TOKEN_INFO)
+                            print("1.", CHANGE_TOKEN)
+                            print("0.", BACK)
+                            c = input("[0-1] > ")
+                            while isInt(c) not in range(2):
+                                c = input("[0-1] > ")
+                            c = int(c)
+                            if c == 0:
+                                break
+                            elif c == 1:
+                                config["Social"]["telegram"] = input(ENTER_YOUR_TOKEN + "\n > ")
+                            edited = True
+                    elif b == 3:
+                        while True:
+                            print(TELEGRAM_CHANNEL_INFO % APP_NAME)
+                            print("1.", CHANGE_CHANNEL)
+                            print("0.", BACK)
+                            c = input("[0-1] > ")
+                            while isInt(c) not in range(2):
+                                c = input("[0-1] > ")
+                            c = int(c)
+                            if c == 0:
+                                break
+                            elif c == 1:
+                                config["Social"]["telegram_channel"] = input(ENTER_YOUR_CHANNEL + "\n > @")
+                            edited = True
+                    elif b == 4:
+                        while True:
+                            print(TELEGRAM_PROXY_INFO)
+                            print("1.", SET_PROXY)
+                            print("0.", BACK)
+                            c = input("[0-1] > ")
+                            while isInt(c) not in range(2):
+                                c = input("[0-1] > ")
+                            c = int(c)
+                            if c == 0:
+                                break
+                            elif c == 1:
+                                config["Social"]["telegram_proxy"] = input(
+                                    ENTER_YOUR_PROXY + "\n > ")
+                            edited = True
+                    elif b == 5:
+                        while True:
+                            print(TELEGRAM_AUTO_SEND_INFO)
+                            print("1.", "[x]" if config["Social"]["telegram_auto"] == "on" else "[ ]", ENABLE)
+                            print("2.", "[x]" if config["Social"]["telegram_auto"] == "off" else "[ ]", DISABLE)
+                            print("0.", BACK)
+                            c = input("[0-2] > ")
+                            while isInt(c) not in range(3):
+                                c = input("[0-2] > ")
+                            c = int(c)
+                            if c == 0:
+                                break
+                            elif c == 1:
+                                config["Social"]["telegram_auto"] = "on"
+                            elif c == 2:
+                                config["Social"]["telegram_auto"] = "off"
+                            edited = True
+            elif a == 5:
+                while True:
+                    print(ANSWER_UI_INFO)
+                    print("1.", "[x]" if config["Social"]["answer_ui"] == "on" else "[ ]", ENABLE)
+                    print("2.", "[x]" if config["Social"]["answer_ui"] == "off" else "[ ]", DISABLE)
+                    print("0.", BACK)
+                    c = input("[0-2] > ")
+                    while isInt(c) not in range(3):
+                        c = input("[0-2] > ")
+                    c = int(c)
+                    if c == 0:
+                        break
+                    elif c == 1:
+                        config["Social"]["answer_ui"] = "on"
+                    elif c == 2:
+                        config["Social"]["answer_ui"] = "off"
+                    edited = True
+            elif a == 6:
+                while True:
+                    print(LANGUAGE_INFO % APP_NAME)
+                    print("1.", "[x]" if config["Config"]["lang"] == "english" else "[ ]",
+                          "English")
+                    print("2.", "[x]" if config["Config"]["lang"] == "russian" else "[ ]",
+                          "Russian")
+                    print("0.", BACK)
+                    b = input("[0-2] > ")
+                    while isInt(b) not in range(3):
+                        b = input("[0-2] > ")
+                    if b == '0':
+                        break
+                    elif b == '1':
+                        config["Config"]["lang"] = "english"
+                    elif b == '2':
+                        config["Config"]["lang"] = "russian"
+                    edited = True
+
+
+class KleverAnswer:
     def __init__(self, text, coincidences):
         self.text = text
         self.coincidences = coincidences
@@ -84,7 +418,7 @@ class KleverAnswer():
         self.probability = new
 
 
-class KleverQuestion(object):
+class KleverQuestion:
     def __init__(self, question, answers: list, sent_time: int, kid: int, optimized: str):
         self.question = question
         self.answers = answers
@@ -118,7 +452,7 @@ class KleverQuestion(object):
                     self.best = str(i) + ". " + answer.text
 
 
-class KleverGoogler():
+class KleverGoogler:
     FILTERED_WORDS = ("сколько", "как много", "вошли в историю как", "какие", "как называется", "чем является",
                       "что из этого", "(у |)как(ой|ого|их) из( этих|)", "какой из героев", "традиционно", "согласно",
                       " - ",
@@ -193,7 +527,6 @@ class KleverGoogler():
 
     def fetch(self, query, newquery=""):
         try:
-            print("Performing search for", query, end="\r")
             google = self.conn.get("https://www.google.ru/search?q=" + urllib.parse.quote_plus(query)).text.lower()
             yandex = self.conn.get("https://www.yandex.ru/search/?text=" + urllib.parse.quote_plus(query)).text.lower()
             newyandex = self.conn.get("https://www.yandex.ru/search/?text=" + urllib.parse.quote_plus(
@@ -292,27 +625,9 @@ class CleverBot(object):
         super().__init__()
         self.corrects = 0
         self.token = ""
-        self.config = configparser.ConfigParser()
-        self.initConfig()
         self.logfile = ""
         self.vid = ""
         self.longPollServer = ""
-        if self.config["Config"]["debug_mode"] == "verbose":
-            logger.setLevel(logging.DEBUG)
-        elif self.config["Config"]["debug_mode"] == "basic":
-            logger.setLevel(logging.INFO)
-        elif self.config["Config"]["debug_mode"] not in ("verbose", "disabled", "basic"):
-            self.config["Config"]["debug_mode"] = "disabled"
-        if self.config["Config"]["updates"] not in ("off", "on"):
-            self.config["Config"]["updates"] = "off"
-        if self.config["Config"]["answer_ui"] not in ("off", "on"):
-            self.config["Config"]["answer_ui"] = "off"
-        if self.config["Config"]["updates"] == "on":
-            checkUpdates()
-        if self.config["Social"]["telegram"] not in ("off", "on"):
-            self.config["Social"]["telegram"] = "off"
-        if self.config["Social"]["telegram_auto"] not in ("off", "on"):
-            self.config["Social"]["telegram_auto"] = "off"
         self.game_start = 0
         self.prize = 0
         self.balance = 0
@@ -322,322 +637,14 @@ class CleverBot(object):
         self.state = 0
         self.current_answer = ""
         self.buf = ""
-        self.proxies = {"http": "socks5h://" + self.config["Social"]["telegram_proxy"],
-                        "https": "socks5h://" + self.config["Social"]["telegram_proxy"]} if self.config["Social"][
-            "telegram_proxy"] else {}
-        self.getToken()
-        self.getStartData()
-
-    def runCustom(self, q=""):
-        if q == "":
-            print("Input question in this format:")
-            print("questionText:answer1#answer2#answer3")
-            q = input("> ")
-        try:
-            q = q.split(":")
-            e = q[1].split("#")
-            google = KleverGoogler(q[0], e, 0, 0)
-            google.search()
-            g = google.genQuestion()
-            self.displayQuestion(g, google, True)
-        except (KeyError, IndexError):
-            print("malformed input, cancelling")
-
-    def saveConfig(self):
-        with open("config.ak", "w") as config_file:
-            self.config.write(config_file)
-
-    def configurate(self):
-        edited = False
-        while True:
-            print("Configurating " + APP_NAME + ". Choose option to edit from list below:")
-            print("1. Debug mode:", self.config["Config"]["debug_mode"])
-            print("2. VK auth token")
-            print("3. Updates check:", self.config["Config"]["updates"])
-            print("4. Telegram integration")
-            print("5. Answer UI:", self.config["Config"]["answer_ui"])
-            print("0. Save and exit", "[EDITED]" if edited else "")
-            a = input("[0-5] > ")
-            while isInt(a) not in range(7):
-                print("Invalid option")
-                a = input("[0-5] > ")
-            a = int(a)
-            if a == 0:
-                self.saveConfig()
-                self.__init__()
-                return
-            elif a == 1:
-                while True:
-                    print("1.", "[x]" if self.config["Config"]["debug_mode"] == "disabled" else "[ ]",
-                          "Disabled - only log critical exceptions")
-                    print("2.", "[x]" if self.config["Config"]["debug_mode"] == "basic" else "[ ]",
-                          "Basic - log some information")
-                    print("3.", "[x]" if self.config["Config"]["debug_mode"] == "verbose" else "[ ]",
-                          "Verbose - log basically everything")
-                    print("\n0. Back")
-                    b = input("[0-3] > ")
-                    while isInt(b) not in range(4):
-                        print("Invalid option")
-                        b = input("[0-3] > ")
-                    b = int(b)
-                    if b == 0:
-                        break
-                    elif b == 1:
-                        self.config["Config"]["debug_mode"] = "disabled"
-                    elif b == 2:
-                        self.config["Config"]["debug_mode"] = "basic"
-                    elif b == 3:
-                        self.config["Config"]["debug_mode"] = "verbose"
-                    edited = True
-            elif a == 2:
-                while True:
-                    print("Current auth token:", self.token[:6] + "******" + self.token[75:])
-                    print("Current account:", self.getTokenInfo())
-                    print("1. Edit token")
-                    print("0. Back")
-                    b = input("[0-1] > ")
-                    while isInt(b) not in range(2):
-                        print("Invalid option")
-                        b = input("[0-1] > ")
-                    b = int(b)
-                    if b == 0:
-                        break
-                    elif b == 1:
-                        self.getToken(True)
-            elif a == 3:
-                while True:
-                    print("It is not recommended to disable update check")
-                    print("1.", "[x]" if self.config["Config"]["updates"] == "on" else "[ ]", "Enable")
-                    print("2.", "[x]" if self.config["Config"]["updates"] == "off" else "[ ]", "Disable")
-                    print("0. Back")
-                    b = input("[0-2] > ")
-                    while isInt(b) not in range(3):
-                        print("Invalid option")
-                        b = input("[0-2] > ")
-                    b = int(b)
-                    if b == 0:
-                        break
-                    elif b == 1:
-                        self.config["Config"]["updates"] = "on"
-                    elif b == 2:
-                        self.config["Config"]["updates"] = "off"
-                    edited = True
-            elif a == 4:
-                while True:
-                    print("Since 0.90 " + APP_NAME + " supports Telegram integration")
-                    print("You can change:")
-                    print("1. Enable:", self.config["Social"]["telegram"])
-                    print("2. Bot token:",
-                          self.config["Social"]["telegram_token"][:7] + "******" + self.config["Social"][
-                                                                                       "telegram_token"][38:])
-                    print("3. Channel to post: @" + self.config["Social"]["telegram_channel"])
-                    print("4. Proxy: " + self.config["Social"]["telegram_proxy"])
-                    print("5. Auto send to channel:", self.config["Social"]["telegram_auto"])
-                    print("0. Back")
-                    b = input("[0-5] > ")
-                    while isInt(b) not in range(6):
-                        print("Invalid input")
-                        b = input("[0-5] > ")
-                    b = int(b)
-                    if b == 0:
-                        break
-                    elif b == 1:
-                        while True:
-                            print("Enable or disable Telegram integration")
-                            print("1.", "[x]" if self.config["Social"]["telegram"] == "on" else "[ ]", "Enable")
-                            print("2.", "[x]" if self.config["Social"]["telegram"] == "off" else "[ ]", "Disable")
-                            print("0. Back")
-                            c = input("[0-2] > ")
-                            while isInt(b) not in range(3):
-                                print("Invalid option")
-                                c = input("[0-2] > ")
-                            c = int(c)
-                            if c == 0:
-                                break
-                            elif c == 1:
-                                self.config["Social"]["telegram"] = "on"
-                            elif c == 2:
-                                self.config["Social"]["telegram"] = "off"
-                            edited = True
-                    elif b == 2:
-                        while True:
-                            print("To use Telegram integration you need a Bot token.")
-                            print("To get it message @BotFather and register a bot")
-                            print("1. Edit token")
-                            print("0. Back")
-                            c = input("[0-1] > ")
-                            while isInt(c) not in range(2):
-                                print("Invalid option")
-                                c = input("[0-1] > ")
-                            c = int(c)
-                            if c == 0:
-                                break
-                            elif c == 1:
-                                self.config["Social"]["telegram"] = input("Enter your token\n > ")
-                            edited = True
-                    elif b == 3:
-                        while True:
-                            print(
-                                "For " + APP_NAME + " to work correctly, we need to know to which channel to post")
-                            print("Your bot must be admin in this channel with rights to post messages")
-                            print("1. Change channel")
-                            print("0. Back")
-                            c = input("[0-1] > ")
-                            while isInt(c) not in range(2):
-                                print("Invalid option")
-                                c = input("[0-1] > ")
-                            c = int(c)
-                            if c == 0:
-                                break
-                            elif c == 1:
-                                self.config["Social"]["telegram_channel"] = input("Enter your channel\n > @")
-                            edited = True
-                    elif b == 4:
-                        while True:
-                            print("In several countries, some providers (try to) block Telegram API server, so")
-                            print("you may need a SOCKS5 proxy to connect")
-                            print("1. Set proxy")
-                            print("0. Back")
-                            c = input("[0-1] > ")
-                            while isInt(c) not in range(2):
-                                print("Invalid option")
-                                c = input("[0-1] > ")
-                            c = int(c)
-                            if c == 0:
-                                break
-                            elif c == 1:
-                                self.config["Social"]["telegram_proxy"] = input(
-                                    "Enter you proxy in this format: [login[:password]@]server.tld[:port]\n > ")
-                            edited = True
-                    elif b == 5:
-                        while True:
-                            print("Enable or disable auto answer sending")
-                            print("1.", "[x]" if self.config["Social"]["telegram_auto"] == "on" else "[ ]", "Enable")
-                            print("2.", "[x]" if self.config["Social"]["telegram_auto"] == "off" else "[ ]", "Disable")
-                            print("0. Back")
-                            c = input("[0-2] > ")
-                            while isInt(c) not in range(3):
-                                print("Invalid option")
-                                c = input("[0-2] > ")
-                            c = int(c)
-                            if c == 0:
-                                break
-                            elif c == 1:
-                                self.config["Social"]["telegram_auto"] = "on"
-                            elif c == 2:
-                                self.config["Social"]["telegram_auto"] = "off"
-                            edited = True
-            elif a == 5:
-                while True:
-                    print("Enable or disable answer UI")
-                    print("1.", "[x]" if self.config["Social"]["answer_ui"] == "on" else "[ ]", "Enable")
-                    print("2.", "[x]" if self.config["Social"]["answer_ui"] == "off" else "[ ]", "Disable")
-                    print("0. Back")
-                    c = input("[0-2] > ")
-                    while isInt(c) not in range(3):
-                        print("Invalid option")
-                        c = input("[0-2] > ")
-                    c = int(c)
-                    if c == 0:
-                        break
-                    elif c == 1:
-                        self.config["Social"]["answer_ui"] = "on"
-                    elif c == 2:
-                        self.config["Social"]["answer_ui"] = "off"
-                    edited = True
-
-    def getTokenInfo(self):
-        a = json.loads(requests.get("https://api.vk.com/method/users.get?v=5.73&access_token=" + self.token).text)[
-            "response"][0]
-        return str(a["id"]) + " > " + a["first_name"] + " " + a["last_name"]
-
-    def initConfig(self):
-        if os.path.exists("config.ak"):
-            logger.debug("config exists")
-            self.config.read("config.ak")
-            return
-        logger.debug("creating config")
-        self.config.add_section("Config")
-        self.config.add_section("Social")
-        self.config["Social"]["telegram"] = "off"
-        self.config["Social"]["telegram_token"] = ""
-        self.config["Social"]["telegram_channel"] = ""
-        self.config["Social"]["telegram_proxy"] = ""
-        self.config["Social"]["telegram_auto"] = ""
-        self.config["Config"]["debug_mode"] = "disabled"
-        self.config["Config"]["updates"] = "on"
-        self.config["Config"]["answer_ui"] = "off"
-        self.saveConfig()
-        self.config.read("config.ak")
-
-    def getToken(self, force=False):
-        print("Getting token...    ", end="\r")
-        if self.token and not force:
-            return
-        try:
-            token = self.config["Config"]["token"]
-        except KeyError:
-            token = ""
-        if token and self.validateToken(token) and not force:
-            logger.debug("valid token found in file: " + token)
-        else:
-            logger.debug("token not found or is invalid, requesting..")
-            print("Hi! You are 1 step behind using this bot! Since VK Clever sends questions via VK API, we need access"
-                  "\ntoken to be able to get them. It is important to use token with Clever appid.\n"
-                  "To get token you just need to click enter, authenticate app in browser (if not already)\n"
-                  "and paste url or token here\n -> If you already have a token, just press E before enter" if not force
-                  else "E if you already have token")
-            while True:
-                if input("[PRESS ENTER TO OPEN AUTH PAGE]") not in ("e", "E", "У", "у"):
-                    try:
-                        webbrowser.open(
-                            "https://oauth.vk.com/authorize?client_id=6334949&display=page&scope=friends,offline,video&response_type=token&v=5.73")
-                    except Exception:
-                        print("failed to open browser, open it by yourself, please:\n"
-                              "https://oauth.vk.com/authorize?client_id=6334949&display=page&scope=friends,offline,video&response_type=token&v=5.73")
-                    time.sleep(3)
-                print("Token or url:")
-                a = input("> ")
-                if "access_token" in a:
-                    try:
-                        token = a.split("#access_token=")[1].split('&')[0]
-                    except Exception:
-                        print("Malformed url given, please try again")
-                        continue
-                    if not self.validateToken(token):
-                        print("Invalid token, please try again")
-                        continue
-                    else:
-                        break
-                elif self.validateToken(a):
-                    token = a
-                    break
-                else:
-                    print("Invalid token, please try again")
-                    continue
-        self.token = token
-        self.config["Config"]["token"] = self.token
-        self.saveConfig()
-
-    def validateToken(self, token=None):
-        if not token:
-            token = self.token
-        out = json.loads(
-            urllib.request.urlopen("https://api.vk.com/method/users.get?v=5.73&access_token=" + token).read())
-        try:
-            out["response"]
-            logger.debug("token is valid")
-            return True
-        except KeyError:
-            logger.debug("token is invalid")
-            return False
 
     def getStartData(self):
-        print("Getting data...       ", end="\r")
-        response = json.loads(requests.post("https://api.vk.com/method/execute.getStartData",
+        print(GETTING_DATA, end="\r")
+        response = requests.post("https://api.vk.com/method/execute.getStartData",
                                             data={"build_ver": 3078, "need_leaderboard": 0, "func_v": -1,
-                                                  "access_token": self.token, "v": "5.73", "lang": "ru",
-                                                  "https": 1}).text)["response"]
+                                                  "access_token": vk_token, "v": "5.73", "lang": "ru",
+                                                  "https": 1}).json()
+        response = response["response"]
         try:
             self.game_start = response["game_info"]["game"]["start_time"]
         except:
@@ -664,22 +671,20 @@ class CleverBot(object):
             }).json()["response"]["url"]
         elif a == "finished":
             self.state = self.GAME_STATE_FINISHED
-        # BASE DATA DISPLAY #
-        print("======={ YOUR STATS }=======")
-        print("BALANCE (RUB):  " + str(self.balance))
-        print("EXTRA LIVES:  \t" + str(self.lives))
-        print("CLEVERS:  \t" + str(self.coins))
-        print("RATING (%):  \t" + str(self.rating))
-        print("======={ GAME  INFO }=======")
-        print("NEXT GAME:     ", datetime.utcfromtimestamp(self.game_start).replace(tzinfo=timezone.utc).astimezone(
-            tz=None).strftime("%H:%M") if self.state != self.GAME_STATE_STARTED else "NOW!")
-        print("PRIZE (RUB):  \t" + str(self.prize))
-        print("STATE:  \t" + str(self.state))
-        # END BASE DATA DISPLAY #
+        print(YOUR_STATS)
+        print(BALANCE + str(self.balance))
+        print(EXTRA_LIVES + str(self.lives))
+        print(COINS + str(self.coins))
+        print(RATING + str(self.rating))
+        print(GAME_INFO)
+        print(NEXT_GAME, datetime.utcfromtimestamp(self.game_start).replace(tzinfo=timezone.utc).astimezone(
+            tz=None).strftime("%H:%M") if self.state != self.GAME_STATE_STARTED else NOW, sep="")
+        print(PRIZE + str(self.prize))
+        print(STATE + str(self.state))
 
     def showCliHelp(self):
         self.showHelp()
-        print("\n" + APP_NAME + " can also work in CLI mode! You can see list of available params in list below:",
+        print("\n%s can also work in CLI mode! You can see list of available params in list below:" % APP_NAME,
               "--only=<run|config> - only runs command passed instead of text interface",
               "-h, --help          - shows this help and quits",
               "--token=<token>     - overwrites token for this session (does NOT change token in config file)",
@@ -704,17 +709,17 @@ class CleverBot(object):
                     print("Token is not specified!")
                     sys.exit(1)
                 print("Validating token..\r", end="")
-                if not self.validateToken(arg.split("=")[1]):
+                if not validateToken(arg.split("=")[1]):
                     print("Token is invalid!     ")
                     sys.exit()
                 self.token = arg.split("=")[1]
             elif "--custom" in arg:
                 try:
                     query = arg.split("=")[1]
-                    self.runCustom(query)
+                    runCustom(query)
                     sys.exit()
                 except Exception:
-                    self.runCustom()
+                    runCustom()
                     sys.exit()
             elif "--only" in arg:
                 if not "=" in arg or arg.split("=")[1] not in ("run", "config"):
@@ -726,10 +731,10 @@ class CleverBot(object):
                         sys.exit()
                     else:
                         pass
-                        self.configurate()
+                        configurate()
 
     def startGame(self):
-        print("To stop press Ctrl-C")
+        print(TO_STOP_PRESS)
         self.corrects = 0
         while True:
             try:
@@ -739,8 +744,7 @@ class CleverBot(object):
                                                     data={"access_token": self.token, "v": "5.73", "https": 1}).text)[
                     "response"]
                 if response:
-                    print("Received question, thinking...", end="\r")
-                    logger.debug("got question: " + response["text"])
+                    print(RECEIVED_QUESTION, end="\r")
                     google = KleverGoogler(response["text"], [response["answers"][i]['text'] for i in range(3)],
                                            response["sent_time"], response["number"])
                     try:
@@ -763,76 +767,49 @@ class CleverBot(object):
                         except KeyError:
                             time.sleep(2)
                 else:
-                    logger.debug("No question, waiting..")
+                    logger.debug(NO_QUESTION)
                     time.sleep(1)
             except (KeyboardInterrupt, SystemExit):
-                logger.debug("stopping")
                 return
             except requests.exceptions.ConnectionError:
                 pass
 
     def showHelp(self):
-        print("This is " + APP_NAME + ", bot for VK Clever, quiz with money prizes by VK Team\n"
-                                      "Coded by TaizoGem, source is available at:\ngithub.com/TaizoGem/AKlever\n"
-                                      "Current version:", VERSION,
-              "\n\nAvailable commands:\n"
-              "?, h        - display this menu\n"
-              "run, start  - start working\n"
-              "auth        - re-auth in application\n"
-              "custom, c   - process a custom question\n"
-              "e, exit     - exit from application\n"
-              "vidinfo     - information about current video\n"
-              "config      - configure application")
+        print(BOT_INFO % (APP_NAME, VERSION),
+              BOT_COMMANDS)
 
     def displayQuestion(self, question: KleverQuestion, googler: KleverGoogler, is_custom: bool = False, correct=-1):
-        print("Question " + str(question.id) + ":", question.question)
-        print("==============================\n")
+        message = QUESTION % (str(question.id), question.question)
+        message += "\n==============================\n"
         for i in range(3):
-            sign = "[ ]"
+            sign = "`[ ]`"
             if i == int(question.best[0]) - 1:
-                sign = "[~]"
+                sign = "`[~]`"
             if i == correct:
-                sign = "[x]"
-            print(sign, "Answer " + str(i + 1) + ":",
-                  str(question.answers[i]))
+                sign = "`[x]`"
+            message += "\n" + sign + " "+ANSWER+" " + str(i + 1) + ": " + str(question.answers[i])
+        message += "\n\n==============================\n"
         if correct != -1:
-            print("Bot status: " + ("" if int(question.best[0]) - 1 == correct else "in") + "correct, " + \
-                str(self.corrects) + "/12")
-        if self.config["Config"]["debug_mode"] in ("basic", "verbose"):
-            print("Query for custom question:\n" + str(question))
-            print("Optimized question:", question.optimized)
-        if self.config["Social"]["telegram_auto"] == "on":
-            message = "Question " + str(question.id) + ": " + question.question
-            message += "\n==============================\n"
-            for i in range(3):
-                sign = "`[ ]`"
-                if i == int(question.best[0]) - 1:
-                    sign = "`[~]`"
-                if i == correct:
-                    sign = "`[x]`"
-                message += "\n" + sign + " Answer " + str(i + 1) + ": " + str(question.answers[i])
-            message += "\n\n==============================\n"
-            message += "Bot status: " + ("" if int(question.best[0]) - 1 == correct else "in") + "correct, " + \
-                       str(self.corrects) + "/12"
-            try:
-                requests.post(
-                    "https://api.telegram.org/bot" + self.config["Social"]["telegram_token"] + "/sendMessage",
-                    json=dict(chat_id="@" + self.config["Social"]["telegram_channel"],
-                              text=message,
-                              parse_mode="markdown"), proxies=self.proxies)
-            except requests.exceptions.InvalidSchema:
-                print("Unable to send message to channel because socks support is not installed")
-        if self.config["Config"]["answer_ui"] == "yes":
+            message += BOT_STATUS + (CORRECT if int(question.best[0]) - 1 == correct else INCORRECT) + ", " + \
+                str(self.corrects) + "/12"
+        print(message)
+        if config["Config"]["debug_mode"] in ("basic", "verbose"):
+            logger.info("Query for custom question:\n" + str(question))
+            logger.info("Optimized question:" + question.optimized)
+        if config["Config"]["answer_ui"] == "on" and config["Social"]["telegram_auto"] == "on" \
+                or config["Social"]["telegram"] == "on":
+            send_to_telegram(message)
+        if config["Config"]["answer_ui"] == "on":
             while True:
-                print("0. Continue")
-                print("1. Re-google")
+                print("0.", ANSWER_UI_CONTINUE)
+                print("1.", ANSWER_UI_REGOOGLE)
                 num = (0, 1)
                 if not googler.ran_reverse:
                     num += (2,)
-                    print("2. force do reverse search")
-                if not self.config["Social"]["telegram_auto"] == "yes":
+                    print("2.", ANSWER_UI_FORCE_REVERSE)
+                if not config["Social"]["telegram_auto"] == "yes":
                     num += (3,)
-                    print("3. Send to @" + self.config["Social"]["telegram_channel"])
+                    print("3." + ANSWER_UI_SEND_TELEGRAM + " @" + config["Social"]["telegram_channel"])
                 a = input(" > ")
                 while isInt(a) not in num:
                     a = input(" > ")
@@ -851,35 +828,16 @@ class CleverBot(object):
                     print()
                     return
                 elif a == 3:
-                    message = "Question " + str(question.id) + ": " + question.question
-                    message += "\n==============================\n"
-                    for i in range(3):
-                        sign = "`[ ]`"
-                        if i == int(question.best[0]) - 1:
-                            sign = "`[~]`"
-                        if i == correct:
-                            sign = "`[x]`"
-                        message += "\n" + sign + " Answer " + str(i + 1) + ": " + str(question.answers[i])
-                    message += "\n\n==============================\n"
-                    message += "Bot status: " + ("" if int(question.best[0]) - 1 == correct else "in") + "correct, " + \
-                               str(self.corrects) + "/12"
-                    try:
-                        requests.post(
-                            "https://api.telegram.org/bot" + self.config["Social"]["telegram_token"] + "/sendMessage",
-                            json=dict(chat_id="@" + self.config["Social"]["telegram_channel"],
-                                      text=message,
-                                      parse_mode="markdown"), proxies=self.proxies)
-                    except requests.exceptions.InvalidSchema:
-                        print("Unable to send message to channel because socks support is not installed")
+                    send_to_telegram(message)
         elif not is_custom:
             time.sleep(10)
 
     def mainloop(self):
         while True:
             try:
-                action = input("[? for help] " + APP_NAME + " > ").lower()
+                action = input(CLI_PROMPT % APP_NAME).lower()
                 if action not in self.ACTIONS:
-                    print("Invalid action, enter ? or h for help")
+                    print(INVALID_ACTION)
                     continue
                 if action in ("?", "h",):
                     self.showHelp()
@@ -888,27 +846,23 @@ class CleverBot(object):
                 elif action in ("e", "exit", "q"):
                     sys.exit()
                 elif action in ("custom", "c"):
-                    self.runCustom()
+                    runCustom()
                 elif action in ("cfg", "config"):
-                    self.configurate()
+                    configurate()
                 elif action == "vidinfo":
                     if self.state == self.GAME_STATE_STARTED:
-                        print("Current video:")
+                        print(CURRENT_VIDEO)
                         print("https://vk.com/video" + self.vid)
-                        print("Longpoll server:")
+                        print("Longpoll:")
                         print(self.longPollServer)
                     else:
-                        print("Game is not running now, nothing to display!")
+                        print(GAME_IS_NOT_RUNNING_NOW)
                 elif action == "r":
                     self.__init__()
                     self.getStartData()
 
             except (KeyboardInterrupt, EOFError):
-                if self.config["Config"]["debug_mode"] == "disabled":
-                    print("\nTo exit execute command 'q'")
-                else:
-                    print("\nFinishing..")
-                    sys.exit()
+                exit()
 
 
 class VVPBot:
@@ -928,8 +882,8 @@ class VVPBot:
     )
 
     def mainloop(self):
-        print("to start press enter and to stop press ctrl+c")
         input("<press enter>")
+        print(TO_STOP_PRESS)
         srv = random.choice(self.SERVERS)
         logger.debug(srv)
         conn = WebSocket(srv)
@@ -945,49 +899,88 @@ class VVPBot:
                     googler.search()
                     c = googler.genQuestion()
                     last_answer = int(c.best[0])
-                    msg = ""
-                    msg += "Question " + str(c.id) + ": " + c.question
-                    msg += "\n==============================\n\n"
+
+                    message = QUESTION % (str(c.id), c.question)
+                    message += "\n==============================\n"
                     for i in range(4):
-                        print(("[~]" if i + 1 == last_answer else "[ ]"), "Answer " + str(i + 1) + ":",
-                              str(c.answers[i]))
-                    print("\n==============================")
+                        message += ("[~]" if i + 1 == last_answer else "[ ]"), "Answer " + str(i + 1) + ":", str(c.answers[i])
+                    message += "\n\n==============================\n"
+                    print(message)
+                    if config["Config"]["debug_mode"] in ("basic", "verbose"):
+                        logger.info("Query for custom question:\n" + str(c))
+                        logger.info("Optimized question:", c.optimized)
+                    if config["Social"]["answer_ui"] == "on" and config["Social"]["telegram_auto"] == "on" \
+                            or config["Social"]["telegram"] == "on":
+                        send_to_telegram(message)
                 elif a["method"] == "round_result":
                     b = a["params"]
                     c = a["params"]["answers"]
-                    print("Answer for question %s: %s" % (b["number"], b["text"]))
-                    print("==============================\n")
+                    message = ANSWER_FOR_QUESTION % (b["number"], b["text"])
+                    message += "\n==============================\n"
                     correct = -1
                     for q in c:
                         d = False
                         if q["correct"]:
                             d = True
                             correct = q["number"]
-                        print(("[x]" if d else "[ ]"), "Answer %s: %s" % (q["number"], q["text"]))
-                    print("\n==============================")
+                        message += ("[x]" if d else "[ ]"), ANSWER + " %s: %s" % (q["number"], q["text"])
+                    message += "\n=============================="
                     if last_answer == correct:
                         corrects += 1
-                    print("Bot status:", ("" if last_answer == correct else "in") + "correct,",
-                          "%s/%s" % (str(corrects), b["number"]))
+                    message += BOT_STATUS + (CORRECT if last_answer == correct else INCORRECT) + ", " + \
+                               str(corrects) + "/" + b["number"]
 
             elif msg.name == "disconnected":
                 print("disconnected")
 
 
 def main():
-    print("What bot would you like to start?")
-    print("1. VK Clever")
-    print("2. VVP")
-    a = input("[1-2] > ")
-    while isInt(a) not in range(3):
-        a = input("[1-2] > ")
-    if a == '1':
-        clever = CleverBot()
-        clever.parseArgs(sys.argv)
-        clever.mainloop()
-    elif a == '2' and WS_INSTALLED:
-        VVP = VVPBot()
-        VVP.mainloop()
+    if config["Config"]["debug_mode"] == "verbose":
+        logger.setLevel(logging.DEBUG)
+    elif config["Config"]["debug_mode"] == "basic":
+        logger.setLevel(logging.INFO)
+    elif config["Config"]["debug_mode"] not in ("verbose", "disabled", "basic"):
+        config["Config"]["debug_mode"] = "disabled"
+    if config["Config"]["updates"] not in ("off", "on"):
+        config["Config"]["updates"] = "off"
+    if config["Config"]["answer_ui"] not in ("off", "on"):
+        config["Config"]["answer_ui"] = "off"
+    if config["Config"]["updates"] == "on":
+        checkUpdates()
+    if config["Social"]["telegram"] not in ("off", "on"):
+        config["Social"]["telegram"] = "off"
+    if config["Social"]["telegram_auto"] not in ("off", "on"):
+        config["Social"]["telegram_auto"] = "off"
+    print(BOT_INFO % (APP_NAME, VERSION))
+    print()
+    try:
+        while True:
+            print(WHAT_BOT)
+            print("1.", CONFIG)
+            print("2.", CUSTOM_QUESTION)
+            print("3.", VK_CLEVER_NAME)
+            print("4.", VVP_NAME)
+            print("0.", EXIT)
+            a = input("[0-4] > ")
+            while isInt(a) not in range(5):
+                a = input("[0-4] > ")
+            if a == '0':
+                exit()
+            elif a == '1':
+                configurate()
+            elif a == '2':
+                runCustom()
+            elif a == '3':
+                getToken()
+                clever = CleverBot()
+                clever.parseArgs(sys.argv)
+                clever.getStartData()
+                clever.mainloop()
+            elif a == '4' and WS_INSTALLED:
+                VVP = VVPBot()
+                VVP.mainloop()
+    except SystemExit:
+        pass
 
 
 if __name__ == '__main__':

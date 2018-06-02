@@ -799,10 +799,10 @@ class CleverBot(object):
         if config["Config"]["debug_mode"] in ("basic", "verbose"):
             logger.info("Query for custom question:\n" + str(question))
             logger.info("Optimized question:" + question.optimized)
-        if config["Config"]["answer_ui"] == "on" and config["Social"]["telegram_auto"] == "on" \
-                or config["Social"]["telegram"] == "on":
+        if (config["Config"]["answer_ui"] == "on" and config["Social"]["telegram_auto"] == "on"
+                or config["Social"]["telegram"] == "on") and not is_custom:
             send_to_telegram(message)
-        if config["Config"]["answer_ui"] == "on":
+        if config["Config"]["answer_ui"] == "on" or is_custom:
             while True:
                 print("0.", ANSWER_UI_CONTINUE)
                 print("1.", ANSWER_UI_REGOOGLE)

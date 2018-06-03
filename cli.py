@@ -80,7 +80,7 @@ def runCustom(q=""):
         google.search()
         g = google.genQuestion()
         CleverBot.displayQuestion(CleverBot(), g, google, True)
-    except IndexError:
+    except IndexError as e:
         print(MALFORMED_INPUT)
 
 
@@ -580,7 +580,7 @@ class KleverGoogler:
             self.doReverse(a)
         del a
 
-    def doReverse(self, prev_results=(0, 0, 0)):
+    def doReverse(self, prev_results=[0 for a in range(25)]):
         logger.info("doing reverse search..")
         self.answers = []
         i = 0

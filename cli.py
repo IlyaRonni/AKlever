@@ -13,8 +13,11 @@ import webbrowser
 import configparser
 
 IS_EXE = getattr(sys, 'frozen', False)
+def clear():
+    if IS_EXE:
+        os.system('cls' if os.name=='nt' else 'clear')
 APP_NAME = "AKlever"  # if you want you can change name of bot here - it will change everywhere
-VERSION = 0.95
+VERSION = 0.96
 logging.basicConfig(format='[%(levelname)s] %(message)s')
 logger = logging.getLogger(APP_NAME)
 config = configparser.ConfigParser()
@@ -41,7 +44,7 @@ else:
     config["Config"]["vvp_user_token"] = ""
     saveConfig()
 config.read("config.ak")
-proxies = {"http": "socks5h://" + config["Social"]["telegram_proxy"],"https": "socks5h://" + config["Social"]["telegram_proxy"]} if config["Social"]["telegram_proxy"] else {}
+proxies = {"http": "socks5h://" + config["Social"]["telegram_proxy"], "https": "socks5h://" + config["Social"]["telegram_proxy"]} if config["Social"]["telegram_proxy"] else {}
 vk_token = ""
 try:
     if config["Config"]["lang"] == "russian":
@@ -95,11 +98,12 @@ def isInt(str):
 
 
 def getTokenInfo(token):
-        a = requests.get("https://api.vk.com/method/users.get?v=5.73&access_token=" + token).json()["response"][0]
-        try:
-            return str(a["id"]) + " > " + a["first_name"] + " " + a["last_name"]
-        except KeyError:
-            return NO_ACCOUNT
+    a = requests.get("https://api.vk.com/method/users.get?v=5.73&access_token=" + token).json()
+    try:
+        a = a["response"][0]
+        return str(a["id"]) + " > " + a["first_name"] + " " + a["last_name"]
+    except KeyError:
+        return NO_ACCOUNT
 
 
 def checkUpdates():
@@ -211,10 +215,11 @@ def getToken(force=False):
 def configurate():
         edited = False
         while True:
+            clear()
             print(CONFIGURATION_INTRO % APP_NAME)
-            print("1. Basic settings")
-            print("2. VK Clever settings")
-            print("3. VVP settings")
+            print("1.", BASIC_SETTINGS)
+            print("2.", VK_CLEVER_SETTINGS)
+            print("3.", VVP_SETTINGS)
             print("0. %s" % SAVE_AND_EXIT, EDITED if edited else "")
             z = input("[0-3] > ")
             while isInt(z) not in range(4):
@@ -222,10 +227,12 @@ def configurate():
             z = int(z)
             if z == 0:
                 saveConfig()
+                clear()
                 return
             elif z == 1:
                 while True:
-                    print("Basic settings")
+                    clear()
+                    print(BASIC_SETTINGS)
                     print("1. %s:" % DEBUG_MODE, config["Config"]["debug_mode"])
                     print("2. %s:" % CHECK_FOR_UPDATES, config["Config"]["updates"])
                     print("3. %s" % TELEGRAM_INTEGRATION)
@@ -237,10 +244,11 @@ def configurate():
                         a = input("[0-5] > ")
                     a = int(a)
                     if a == 0:
-                        saveConfig()
-                        return
+                        clear()
+                        break
                     elif a == 1:
                         while True:
+                            clear()
                             print("1.", "[x]" if config["Config"]["debug_mode"] == "disabled" else "[ ]",
                                   DEBUG_DISABLED)
                             print("2.", "[x]" if config["Config"]["debug_mode"] == "basic" else "[ ]",
@@ -253,6 +261,7 @@ def configurate():
                                 b = input("[0-3] > ")
                             b = int(b)
                             if b == 0:
+                                clear()
                                 break
                             elif b == 1:
                                 config["Config"]["debug_mode"] = "disabled"
@@ -263,6 +272,7 @@ def configurate():
                             edited = True
                     elif a == 2:
                         while True:
+                            clear()
                             print(UPDATES_INFO)
                             print("1.", "[x]" if config["Config"]["updates"] == "on" else "[ ]", ENABLE)
                             print("2.", "[x]" if config["Config"]["updates"] == "off" else "[ ]", DISABLE)
@@ -272,6 +282,7 @@ def configurate():
                                 b = input("[0-2] > ")
                             b = int(b)
                             if b == 0:
+                                clear()
                                 break
                             elif b == 1:
                                 config["Config"]["updates"] = "on"
@@ -280,6 +291,7 @@ def configurate():
                             edited = True
                     elif a == 3:
                         while True:
+                            clear()
                             print(TELEGRAM_INTEGRATION_INFO % APP_NAME)
                             print("1. %s:" % ENABLE, config["Social"]["telegram"])
                             print("2. %s:" % TELEGRAM_BOT_TOKEN,
@@ -294,9 +306,11 @@ def configurate():
                                 b = input("[0-5] > ")
                             b = int(b)
                             if b == 0:
+                                clear()
                                 break
                             elif b == 1:
                                 while True:
+                                    clear()
                                     print(TELEGRAM_ENABLE_DISABLE)
                                     print("1.", "[x]" if config["Social"]["telegram"] == "on" else "[ ]", ENABLE)
                                     print("2.", "[x]" if config["Social"]["telegram"] == "off" else "[ ]", DISABLE)
@@ -306,6 +320,7 @@ def configurate():
                                         c = input("[0-2] > ")
                                     c = int(c)
                                     if c == 0:
+                                        clear()
                                         break
                                     elif c == 1:
                                         config["Social"]["telegram"] = "on"
@@ -314,6 +329,7 @@ def configurate():
                                     edited = True
                             elif b == 2:
                                 while True:
+                                    clear()
                                     print(TELEGRAM_BOT_TOKEN_INFO)
                                     print("1.", CHANGE_TOKEN)
                                     print("0.", BACK)
@@ -322,12 +338,14 @@ def configurate():
                                         c = input("[0-1] > ")
                                     c = int(c)
                                     if c == 0:
+                                        clear()
                                         break
                                     elif c == 1:
                                         config["Social"]["telegram"] = input(ENTER_YOUR_TOKEN + "\n > ")
                                     edited = True
                             elif b == 3:
                                 while True:
+                                    clear()
                                     print(TELEGRAM_CHANNEL_INFO % APP_NAME)
                                     print("1.", CHANGE_CHANNEL)
                                     print("0.", BACK)
@@ -336,12 +354,14 @@ def configurate():
                                         c = input("[0-1] > ")
                                     c = int(c)
                                     if c == 0:
+                                        clear()
                                         break
                                     elif c == 1:
                                         config["Social"]["telegram_channel"] = input(ENTER_YOUR_CHANNEL + "\n > @")
                                     edited = True
                             elif b == 4:
                                 while True:
+                                    clear()
                                     print(TELEGRAM_PROXY_INFO)
                                     print("1.", SET_PROXY)
                                     print("0.", BACK)
@@ -350,6 +370,7 @@ def configurate():
                                         c = input("[0-1] > ")
                                     c = int(c)
                                     if c == 0:
+                                        clear()
                                         break
                                     elif c == 1:
                                         config["Social"]["telegram_proxy"] = input(
@@ -357,6 +378,7 @@ def configurate():
                                     edited = True
                             elif b == 5:
                                 while True:
+                                    clear()
                                     print(TELEGRAM_AUTO_SEND_INFO)
                                     print("1.", "[x]" if config["Social"]["telegram_auto"] == "on" else "[ ]", ENABLE)
                                     print("2.", "[x]" if config["Social"]["telegram_auto"] == "off" else "[ ]", DISABLE)
@@ -366,6 +388,7 @@ def configurate():
                                         c = input("[0-2] > ")
                                     c = int(c)
                                     if c == 0:
+                                        clear()
                                         break
                                     elif c == 1:
                                         config["Social"]["telegram_auto"] = "on"
@@ -374,6 +397,7 @@ def configurate():
                                     edited = True
                     elif a == 4:
                         while True:
+                            clear()
                             print(ANSWER_UI_INFO)
                             print("1.", "[x]" if config["Social"]["answer_ui"] == "on" else "[ ]", ENABLE)
                             print("2.", "[x]" if config["Social"]["answer_ui"] == "off" else "[ ]", DISABLE)
@@ -383,6 +407,7 @@ def configurate():
                                 c = input("[0-2] > ")
                             c = int(c)
                             if c == 0:
+                                clear()
                                 break
                             elif c == 1:
                                 config["Social"]["answer_ui"] = "on"
@@ -391,6 +416,7 @@ def configurate():
                             edited = True
                     elif a == 5:
                         while True:
+                            clear()
                             print(LANGUAGE_INFO % APP_NAME)
                             print("1.", "[x]" if config["Config"]["lang"] == "english" else "[ ]",
                                   "English")
@@ -401,6 +427,7 @@ def configurate():
                             while isInt(b) not in range(3):
                                 b = input("[0-2] > ")
                             if b == '0':
+                                clear()
                                 break
                             elif b == '1':
                                 config["Config"]["lang"] = "english"
@@ -409,8 +436,13 @@ def configurate():
                             edited = True
             elif z == 2:
                 while True:
+                    clear()
+                    try:
+                        vk_token = config["Config"]["token"]
+                    except KeyError:
+                        vk_token = ""
                     print(VK_AUTH_INFO)
-                    print("%s:" % CURRENT_TOKEN, vk_token[:6] + "******" + vk_token[75:])
+                    print("%s:" % CURRENT_TOKEN, (vk_token[:6] + "******" + vk_token[75:]) if vk_token else NO_TOKEN)
                     print("%s:" % CURRENT_ACCOUNT, getTokenInfo(vk_token))
                     print("1.", CHANGE_TOKEN)
                     print("0.", BACK)
@@ -419,57 +451,73 @@ def configurate():
                         b = input("[0-1] > ")
                     b = int(b)
                     if b == 0:
+                        clear()
                         break
                     elif b == 1:
                         getToken(True)
             elif z == 3:
                 while True:
-                    print("To use this function, you need to sniff VVP packets. I recommend using Packet Sniffer.")
-                    print("1. VVP User Statistics")
-                    print("2. VVP User Info")
+                    clear()
+                    print(VVP_SETTINGS_INFO)
+                    print("1.", VVP_USER_STATS)
+                    print("2.", VVP_USER_INFO)
                     print("0. Back")
                     b = input("[0-2] > ")
                     while isInt(b) not in range(3):
-                        print("Invalid option")
                         b = input("[0-2] > ")
                     b = int(b)
                     if b == 0:
+                        clear()
                         break
                     elif b == 1:
-                        print("1.", "[x]" if config["Config"]["vvp_user_stats"] == "on" else "[ ]", "Enable")
-                        print("2.", "[x]" if config["Config"]["vvp_user_stats"] == "off" else "[ ]", "Disable")
-                        print("0. Back")
-                        c = input("[0-2] > ")
-                        while isInt(c) not in range(3):
-                            print("Invalid option")
+                        while True:
+                            clear()
+                            try:
+                                config["Config"]["vvp_user_stats"] == "on"
+                            except KeyError:
+                                config["Config"]["vvp_user_stats"] = "off"
+                            print("1.", "[x]" if config["Config"]["vvp_user_stats"] == "on" else "[ ]", ENABLE)
+                            print("2.", "[x]" if config["Config"]["vvp_user_stats"] == "off" else "[ ]", DISABLE)
+                            print("0.", BACK)
                             c = input("[0-2] > ")
-                        c = int(c)
-                        if c == 0:
-                            break
-                        elif c == 1:
-                            config["Config"]["vvp_user_stats"] = "on"
-                            edited = True
-                        elif c == 2:
-                            config["Config"]["vvp_user_stats"] = "off"
+                            while isInt(c) not in range(3):
+                                c = input("[0-2] > ")
+                            c = int(c)
+                            if c == 0:
+                                clear()
+                                break
+                            elif c == 1:
+                                try:
+                                    if config["Config"]["vvp_user_token"] and config["Config"]["vvp_user_id"]:
+                                        config["Config"]["vvp_user_stats"] = "on"
+                                    else:
+                                        print(VVP_NO_INFO)
+                                except KeyError:
+                                    print(VVP_NO_INFO)
+                            elif c == 2:
+                                config["Config"]["vvp_user_stats"] = "off"
                             edited = True
                     elif b == 2:
-                        print("Token and ID is required")
-                        print("1. VVP User Token")
-                        print("2. VVP User ID")
-                        print("0. Back")
-                        c = input("[0-2] > ")
-                        while isInt(c) not in range(3):
-                            print("Invalid option")
+                        while True:
+                            clear()
+                            print(VVP_USER_INFO)
+                            print("1.", VVP_USER_TOKEN_INFO)
+                            print("2.", VVP_USER_ID_INFO)
+                            print("0.", BACK)
                             c = input("[0-2] > ")
-                        c = int(c)
-                        if c == 0:
-                            break
-                        elif c == 1:
-                            config["Config"]["vvp_user_token"] = input("Enter your token\n > ")
-                            edited = True
-                        elif c == 2:
-                            config["Config"]["vvp_user_id"] = input("Enter your id\n > ")
-                            edited = True
+                            while isInt(c) not in range(3):
+                                print("Invalid option")
+                                c = input("[0-2] > ")
+                            c = int(c)
+                            if c == 0:
+                                clear()
+                                break
+                            elif c == 1:
+                                config["Config"]["vvp_user_token"] = input(ENTER_YOUR_TOKEN + "\n > ")
+                                edited = True
+                            elif c == 2:
+                                config["Config"]["vvp_user_id"] = input(ENTER_YOUR_ID + "\n > ")
+                                edited = True
 
 class KleverAnswer:
     def __init__(self, text, coincidences):
@@ -1045,7 +1093,7 @@ def main():
             while isInt(a) not in range(5):
                 a = input("[0-4] > ")
             if a == '0':
-                exit()
+                sys.exit()
             elif a == '1':
                 configurate()
             elif a == '2':

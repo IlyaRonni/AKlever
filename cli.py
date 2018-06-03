@@ -212,43 +212,202 @@ def configurate():
         edited = False
         while True:
             print(CONFIGURATION_INTRO % APP_NAME)
-            print("1. %s:" % DEBUG_MODE, config["Config"]["debug_mode"])
-            print("2. %s" % VK_AUTH_TOKEN)
-            print("3. %s:" % CHECK_FOR_UPDATES, config["Config"]["updates"])
-            print("4. %s" % TELEGRAM_INTEGRATION)
-            print("5. %s:" % ANSWER_UI, config["Config"]["answer_ui"])
-            print("6. %s: %s" % (LANGUAGE, CURRENT_LANG))
+            print("1. Basic settings")
+            print("2. VK Clever settings")
+            print("3. VVP settings")
             print("0. %s" % SAVE_AND_EXIT, EDITED if edited else "")
-            a = input("[0-6] > ")
-            while isInt(a) not in range(7):
-                a = input("[0-6] > ")
-            a = int(a)
-            if a == 0:
+            z = input("[0-3] > ")
+            while isInt(z) not in range(4):
+                z = input("[0-3] > ")
+            z = int(z)
+            if z == 0:
                 saveConfig()
                 return
-            elif a == 1:
+            elif z == 1:
                 while True:
-                    print("1.", "[x]" if config["Config"]["debug_mode"] == "disabled" else "[ ]",
-                          DEBUG_DISABLED)
-                    print("2.", "[x]" if config["Config"]["debug_mode"] == "basic" else "[ ]",
-                          DEBUG_BASIC)
-                    print("3.", "[x]" if config["Config"]["debug_mode"] == "verbose" else "[ ]",
-                          DEBUG_VERBOSE)
-                    print("\n0.", BACK)
-                    b = input("[0-3] > ")
-                    while isInt(b) not in range(4):
-                        b = input("[0-3] > ")
-                    b = int(b)
-                    if b == 0:
-                        break
-                    elif b == 1:
-                        config["Config"]["debug_mode"] = "disabled"
-                    elif b == 2:
-                        config["Config"]["debug_mode"] = "basic"
-                    elif b == 3:
-                        config["Config"]["debug_mode"] = "verbose"
-                    edited = True
-            elif a == 2:
+                    print("Basic settings")
+                    print("1. %s:" % DEBUG_MODE, config["Config"]["debug_mode"])
+                    print("2. %s:" % CHECK_FOR_UPDATES, config["Config"]["updates"])
+                    print("3. %s" % TELEGRAM_INTEGRATION)
+                    print("4. %s:" % ANSWER_UI, config["Config"]["answer_ui"])
+                    print("5. %s: %s" % (LANGUAGE, CURRENT_LANG))
+                    print("0. %s" % SAVE_AND_EXIT, EDITED if edited else "")
+                    a = input("[0-5] > ")
+                    while isInt(a) not in range(7):
+                        a = input("[0-5] > ")
+                    a = int(a)
+                    if a == 0:
+                        saveConfig()
+                        return
+                    elif a == 1:
+                        while True:
+                            print("1.", "[x]" if config["Config"]["debug_mode"] == "disabled" else "[ ]",
+                                  DEBUG_DISABLED)
+                            print("2.", "[x]" if config["Config"]["debug_mode"] == "basic" else "[ ]",
+                                  DEBUG_BASIC)
+                            print("3.", "[x]" if config["Config"]["debug_mode"] == "verbose" else "[ ]",
+                                  DEBUG_VERBOSE)
+                            print("\n0.", BACK)
+                            b = input("[0-3] > ")
+                            while isInt(b) not in range(4):
+                                b = input("[0-3] > ")
+                            b = int(b)
+                            if b == 0:
+                                break
+                            elif b == 1:
+                                config["Config"]["debug_mode"] = "disabled"
+                            elif b == 2:
+                                config["Config"]["debug_mode"] = "basic"
+                            elif b == 3:
+                                config["Config"]["debug_mode"] = "verbose"
+                            edited = True
+                    elif a == 2:
+                        while True:
+                            print(UPDATES_INFO)
+                            print("1.", "[x]" if config["Config"]["updates"] == "on" else "[ ]", ENABLE)
+                            print("2.", "[x]" if config["Config"]["updates"] == "off" else "[ ]", DISABLE)
+                            print("0.", BACK)
+                            b = input("[0-2] > ")
+                            while isInt(b) not in range(3):
+                                b = input("[0-2] > ")
+                            b = int(b)
+                            if b == 0:
+                                break
+                            elif b == 1:
+                                config["Config"]["updates"] = "on"
+                            elif b == 2:
+                                config["Config"]["updates"] = "off"
+                            edited = True
+                    elif a == 3:
+                        while True:
+                            print(TELEGRAM_INTEGRATION_INFO % APP_NAME)
+                            print("1. %s:" % ENABLE, config["Social"]["telegram"])
+                            print("2. %s:" % TELEGRAM_BOT_TOKEN,
+                                  config["Social"]["telegram_token"][:7] + "******" + config["Social"][
+                                                                                               "telegram_token"][38:])
+                            print("3. %s: @" + config["Social"]["telegram_channel"] % TELEGRAM_CHANNEL)
+                            print("4. %s: " + config["Social"]["telegram_proxy"] % PROXY)
+                            print("5. %s:" % TELEGRAM_AUTO_SEND, config["Social"]["telegram_auto"])
+                            print("0.", BACK)
+                            b = input("[0-5] > ")
+                            while isInt(b) not in range(6):
+                                b = input("[0-5] > ")
+                            b = int(b)
+                            if b == 0:
+                                break
+                            elif b == 1:
+                                while True:
+                                    print(TELEGRAM_ENABLE_DISABLE)
+                                    print("1.", "[x]" if config["Social"]["telegram"] == "on" else "[ ]", ENABLE)
+                                    print("2.", "[x]" if config["Social"]["telegram"] == "off" else "[ ]", DISABLE)
+                                    print("0.", BACK)
+                                    c = input("[0-2] > ")
+                                    while isInt(b) not in range(3):
+                                        c = input("[0-2] > ")
+                                    c = int(c)
+                                    if c == 0:
+                                        break
+                                    elif c == 1:
+                                        config["Social"]["telegram"] = "on"
+                                    elif c == 2:
+                                        config["Social"]["telegram"] = "off"
+                                    edited = True
+                            elif b == 2:
+                                while True:
+                                    print(TELEGRAM_BOT_TOKEN_INFO)
+                                    print("1.", CHANGE_TOKEN)
+                                    print("0.", BACK)
+                                    c = input("[0-1] > ")
+                                    while isInt(c) not in range(2):
+                                        c = input("[0-1] > ")
+                                    c = int(c)
+                                    if c == 0:
+                                        break
+                                    elif c == 1:
+                                        config["Social"]["telegram"] = input(ENTER_YOUR_TOKEN + "\n > ")
+                                    edited = True
+                            elif b == 3:
+                                while True:
+                                    print(TELEGRAM_CHANNEL_INFO % APP_NAME)
+                                    print("1.", CHANGE_CHANNEL)
+                                    print("0.", BACK)
+                                    c = input("[0-1] > ")
+                                    while isInt(c) not in range(2):
+                                        c = input("[0-1] > ")
+                                    c = int(c)
+                                    if c == 0:
+                                        break
+                                    elif c == 1:
+                                        config["Social"]["telegram_channel"] = input(ENTER_YOUR_CHANNEL + "\n > @")
+                                    edited = True
+                            elif b == 4:
+                                while True:
+                                    print(TELEGRAM_PROXY_INFO)
+                                    print("1.", SET_PROXY)
+                                    print("0.", BACK)
+                                    c = input("[0-1] > ")
+                                    while isInt(c) not in range(2):
+                                        c = input("[0-1] > ")
+                                    c = int(c)
+                                    if c == 0:
+                                        break
+                                    elif c == 1:
+                                        config["Social"]["telegram_proxy"] = input(
+                                            ENTER_YOUR_PROXY + "\n > ")
+                                    edited = True
+                            elif b == 5:
+                                while True:
+                                    print(TELEGRAM_AUTO_SEND_INFO)
+                                    print("1.", "[x]" if config["Social"]["telegram_auto"] == "on" else "[ ]", ENABLE)
+                                    print("2.", "[x]" if config["Social"]["telegram_auto"] == "off" else "[ ]", DISABLE)
+                                    print("0.", BACK)
+                                    c = input("[0-2] > ")
+                                    while isInt(c) not in range(3):
+                                        c = input("[0-2] > ")
+                                    c = int(c)
+                                    if c == 0:
+                                        break
+                                    elif c == 1:
+                                        config["Social"]["telegram_auto"] = "on"
+                                    elif c == 2:
+                                        config["Social"]["telegram_auto"] = "off"
+                                    edited = True
+                    elif a == 4:
+                        while True:
+                            print(ANSWER_UI_INFO)
+                            print("1.", "[x]" if config["Social"]["answer_ui"] == "on" else "[ ]", ENABLE)
+                            print("2.", "[x]" if config["Social"]["answer_ui"] == "off" else "[ ]", DISABLE)
+                            print("0.", BACK)
+                            c = input("[0-2] > ")
+                            while isInt(c) not in range(3):
+                                c = input("[0-2] > ")
+                            c = int(c)
+                            if c == 0:
+                                break
+                            elif c == 1:
+                                config["Social"]["answer_ui"] = "on"
+                            elif c == 2:
+                                config["Social"]["answer_ui"] = "off"
+                            edited = True
+                    elif a == 5:
+                        while True:
+                            print(LANGUAGE_INFO % APP_NAME)
+                            print("1.", "[x]" if config["Config"]["lang"] == "english" else "[ ]",
+                                  "English")
+                            print("2.", "[x]" if config["Config"]["lang"] == "russian" else "[ ]",
+                                  "Russian")
+                            print("0.", BACK)
+                            b = input("[0-2] > ")
+                            while isInt(b) not in range(3):
+                                b = input("[0-2] > ")
+                            if b == '0':
+                                break
+                            elif b == '1':
+                                config["Config"]["lang"] = "english"
+                            elif b == '2':
+                                config["Config"]["lang"] = "russian"
+                            edited = True
+            elif z == 2:
                 while True:
                     print(VK_AUTH_INFO)
                     print("%s:" % CURRENT_TOKEN, vk_token[:6] + "******" + vk_token[75:])
@@ -263,153 +422,54 @@ def configurate():
                         break
                     elif b == 1:
                         getToken(True)
-            elif a == 3:
+            elif z == 3:
                 while True:
-                    print(UPDATES_INFO)
-                    print("1.", "[x]" if config["Config"]["updates"] == "on" else "[ ]", ENABLE)
-                    print("2.", "[x]" if config["Config"]["updates"] == "off" else "[ ]", DISABLE)
-                    print("0.", BACK)
+                    print("To use this function, you need to sniff VVP packets. I recommend using Packet Sniffer.")
+                    print("1. VVP User Statistics")
+                    print("2. VVP User Info")
+                    print("0. Back")
                     b = input("[0-2] > ")
                     while isInt(b) not in range(3):
+                        print("Invalid option")
                         b = input("[0-2] > ")
                     b = int(b)
                     if b == 0:
                         break
                     elif b == 1:
-                        config["Config"]["updates"] = "on"
-                    elif b == 2:
-                        config["Config"]["updates"] = "off"
-                    edited = True
-            elif a == 4:
-                while True:
-                    print(TELEGRAM_INTEGRATION_INFO % APP_NAME)
-                    print("1. %s:" % ENABLE, config["Social"]["telegram"])
-                    print("2. %s:" % TELEGRAM_BOT_TOKEN,
-                          config["Social"]["telegram_token"][:7] + "******" + config["Social"][
-                                                                                       "telegram_token"][38:])
-                    print("3. %s: @" + config["Social"]["telegram_channel"] % TELEGRAM_CHANNEL)
-                    print("4. %s: " + config["Social"]["telegram_proxy"] % PROXY)
-                    print("5. %s:" % TELEGRAM_AUTO_SEND, config["Social"]["telegram_auto"])
-                    print("0.", BACK)
-                    b = input("[0-5] > ")
-                    while isInt(b) not in range(6):
-                        b = input("[0-5] > ")
-                    b = int(b)
-                    if b == 0:
-                        break
-                    elif b == 1:
-                        while True:
-                            print(TELEGRAM_ENABLE_DISABLE)
-                            print("1.", "[x]" if config["Social"]["telegram"] == "on" else "[ ]", ENABLE)
-                            print("2.", "[x]" if config["Social"]["telegram"] == "off" else "[ ]", DISABLE)
-                            print("0.", BACK)
-                            c = input("[0-2] > ")
-                            while isInt(b) not in range(3):
-                                c = input("[0-2] > ")
-                            c = int(c)
-                            if c == 0:
-                                break
-                            elif c == 1:
-                                config["Social"]["telegram"] = "on"
-                            elif c == 2:
-                                config["Social"]["telegram"] = "off"
-                            edited = True
-                    elif b == 2:
-                        while True:
-                            print(TELEGRAM_BOT_TOKEN_INFO)
-                            print("1.", CHANGE_TOKEN)
-                            print("0.", BACK)
-                            c = input("[0-1] > ")
-                            while isInt(c) not in range(2):
-                                c = input("[0-1] > ")
-                            c = int(c)
-                            if c == 0:
-                                break
-                            elif c == 1:
-                                config["Social"]["telegram"] = input(ENTER_YOUR_TOKEN + "\n > ")
-                            edited = True
-                    elif b == 3:
-                        while True:
-                            print(TELEGRAM_CHANNEL_INFO % APP_NAME)
-                            print("1.", CHANGE_CHANNEL)
-                            print("0.", BACK)
-                            c = input("[0-1] > ")
-                            while isInt(c) not in range(2):
-                                c = input("[0-1] > ")
-                            c = int(c)
-                            if c == 0:
-                                break
-                            elif c == 1:
-                                config["Social"]["telegram_channel"] = input(ENTER_YOUR_CHANNEL + "\n > @")
-                            edited = True
-                    elif b == 4:
-                        while True:
-                            print(TELEGRAM_PROXY_INFO)
-                            print("1.", SET_PROXY)
-                            print("0.", BACK)
-                            c = input("[0-1] > ")
-                            while isInt(c) not in range(2):
-                                c = input("[0-1] > ")
-                            c = int(c)
-                            if c == 0:
-                                break
-                            elif c == 1:
-                                config["Social"]["telegram_proxy"] = input(
-                                    ENTER_YOUR_PROXY + "\n > ")
-                            edited = True
-                    elif b == 5:
-                        while True:
-                            print(TELEGRAM_AUTO_SEND_INFO)
-                            print("1.", "[x]" if config["Social"]["telegram_auto"] == "on" else "[ ]", ENABLE)
-                            print("2.", "[x]" if config["Social"]["telegram_auto"] == "off" else "[ ]", DISABLE)
-                            print("0.", BACK)
-                            c = input("[0-2] > ")
-                            while isInt(c) not in range(3):
-                                c = input("[0-2] > ")
-                            c = int(c)
-                            if c == 0:
-                                break
-                            elif c == 1:
-                                config["Social"]["telegram_auto"] = "on"
-                            elif c == 2:
-                                config["Social"]["telegram_auto"] = "off"
-                            edited = True
-            elif a == 5:
-                while True:
-                    print(ANSWER_UI_INFO)
-                    print("1.", "[x]" if config["Social"]["answer_ui"] == "on" else "[ ]", ENABLE)
-                    print("2.", "[x]" if config["Social"]["answer_ui"] == "off" else "[ ]", DISABLE)
-                    print("0.", BACK)
-                    c = input("[0-2] > ")
-                    while isInt(c) not in range(3):
+                        print("1.", "[x]" if self.config["Config"]["vvp_user_stats"] == "on" else "[ ]", "Enable")
+                        print("2.", "[x]" if self.config["Config"]["vvp_user_stats"] == "off" else "[ ]", "Disable")
+                        print("0. Back")
                         c = input("[0-2] > ")
-                    c = int(c)
-                    if c == 0:
-                        break
-                    elif c == 1:
-                        config["Social"]["answer_ui"] = "on"
-                    elif c == 2:
-                        config["Social"]["answer_ui"] = "off"
-                    edited = True
-            elif a == 6:
-                while True:
-                    print(LANGUAGE_INFO % APP_NAME)
-                    print("1.", "[x]" if config["Config"]["lang"] == "english" else "[ ]",
-                          "English")
-                    print("2.", "[x]" if config["Config"]["lang"] == "russian" else "[ ]",
-                          "Russian")
-                    print("0.", BACK)
-                    b = input("[0-2] > ")
-                    while isInt(b) not in range(3):
-                        b = input("[0-2] > ")
-                    if b == '0':
-                        break
-                    elif b == '1':
-                        config["Config"]["lang"] = "english"
-                    elif b == '2':
-                        config["Config"]["lang"] = "russian"
-                    edited = True
-
+                        while isInt(c) not in range(3):
+                            print("Invalid option")
+                            c = input("[0-2] > ")
+                        c = int(c)
+                        if c == 0:
+                            break
+                        elif c == 1:
+                            self.config["Config"]["vvp_user_stats"] = "on"
+                            edited = True
+                        elif c == 2:
+                            self.config["Config"]["vvp_user_stats"] = "off"
+                            edited = True
+                    elif b == 2:
+                        print("Token and ID is required")
+                        print("1. VVP User Token")
+                        print("2. VVP User ID")
+                        print("0. Back")
+                        c = input("[0-2] > ")
+                        while isInt(c) not in range(3):
+                            print("Invalid option")
+                            c = input("[0-2] > ")
+                        c = int(c)
+                        if c == 0:
+                            break
+                        elif c == 1:
+                            self.config["Config"]["vvp_user_token"] = input("Enter your token\n > ")
+                            edited = True
+                        elif c == 2:
+                            self.config["Config"]["vvp_user_id"] = input("Enter your id\n > ")
+                            edited = True
 
 class KleverAnswer:
     def __init__(self, text, coincidences):

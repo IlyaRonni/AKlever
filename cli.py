@@ -769,8 +769,13 @@ class CleverBot(object):
                     self.displayQuestion(question, google)
                     while True:
                         answrsp = requests.post("https://api.vk.com/method/streamQuiz.getCurrentStatus",
-                                                data={"access_token": self.token, "v": "5.73", "lang": "ru",
-                                                      "https": 1}).json()["response"]["question"]
+                                                data={"access_token": vk_token, "v": "5.73", "lang": "ru",
+                                                      "https": 1}).json()
+                        try:
+                            answrsp = answrsp["response"]["question"]
+                        except KeyError:
+                            print("Exception occurred:\n", answrsp)
+                            break
                         try:
                             correct = answrsp["right_answer_id"]
                             self.displayQuestion(question, google, False, correct)

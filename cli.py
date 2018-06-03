@@ -527,6 +527,7 @@ class KleverGoogler:
         self.conn = requests.Session()
         self.sent_time = sent_time
         self.number = num
+        self.ran_reverse = False
 
     def fetch(self, query, newquery=""):
         try:

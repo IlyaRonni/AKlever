@@ -648,7 +648,12 @@ class CleverBot(object):
                                             data={"build_ver": 3078, "need_leaderboard": 0, "func_v": -1,
                                                   "access_token": vk_token, "v": "5.73", "lang": "ru",
                                                   "https": 1}).json()
-        response = response["response"]
+        try:
+            response = response["response"]
+        except KeyError:
+            print("Error occurred:")
+            print(response)
+            return
         try:
             self.game_start = response["game_info"]["game"]["start_time"]
         except:
@@ -665,14 +670,19 @@ class CleverBot(object):
             self.state = self.GAME_STATE_STARTED
             self.vid = str(response["game_info"]["game"]["video_owner_id"]) + "_" + str(
                 response["game_info"]["game"]["video_id"])
-            self.longPollServer = requests.post("https://api.vk.com/method/video.getLongPollServer", data={
-                "video_id": response["game_info"]["game"]["video_id"],
-                "owner_id": response["game_info"]["game"]["video_owner_id"],
-                "access_token": self.token,
-                "v": 5.73,
-                "lang": "ru",
-                "https": 1
-            }).json()["response"]["url"]
+            try:
+                a = requests.post("https://api.vk.com/method/video.getLongPollServer", data={
+                    "video_id": response["game_info"]["game"]["video_id"],
+                    "owner_id": response["game_info"]["game"]["video_owner_id"],
+                    "access_token": vk_token,
+                    "v": 5.73,
+                    "lang": "ru",
+                    "https": 1
+                }).json()
+                self.longPollServer = a["response"]["url"]
+            except KeyError:
+                print("Exception occurred:\n", a)
+                self.longPollServer = ""
         elif a == "finished":
             self.state = self.GAME_STATE_FINISHED
         print(YOUR_STATS)
@@ -745,8 +755,7 @@ class CleverBot(object):
                 # example question https://gist.githubusercontent.com/TaizoGem/1aea44b8e5fa05550f50617673809ccb/raw/a93b1b060a595142c8ed13111a5e56f4e1afe6ee/aklever.test.json
                 # base server https://api.vk.com/method/execute.getLastQuestion
                 response = json.loads(requests.post("https://api.vk.com/method/execute.getLastQuestion",
-                                                    data={"access_token": self.token, "v": "5.73", "https": 1}).text)[
-                    "response"]
+                                                    data={"access_token": vk_token, "v": "5.73", "https": 1}).text)["response"]
                 if response:
                     print(RECEIVED_QUESTION, end="\r")
                     google = KleverGoogler(response["text"], [response["answers"][i]['text'] for i in range(3)],
@@ -907,13 +916,13 @@ class VVPBot:
                     message = QUESTION % (str(c.id), c.question)
                     message += "\n==============================\n"
                     for i in range(4):
-                        message += ("[~]" if i + 1 == last_answer else "[ ]"), "Answer " + str(i + 1) + ":", str(c.answers[i])
+                        message += ("[~]" if i + 1 == last_answer else "[ ]") + "Answer " + str(i + 1) + ":" + str(c.answers[i])
                     message += "\n\n==============================\n"
                     print(message)
                     if config["Config"]["debug_mode"] in ("basic", "verbose"):
                         logger.info("Query for custom question:\n" + str(c))
-                        logger.info("Optimized question:", c.optimized)
-                    if config["Social"]["answer_ui"] == "on" and config["Social"]["telegram_auto"] == "on" \
+                        logger.info("Optimized question:" + c.optimized)
+                    if config["Config"]["answer_ui"] == "on" and config["Social"]["telegram_auto"] == "on" \
                             or config["Social"]["telegram"] == "on":
                         send_to_telegram(message)
                 elif a["method"] == "round_result":
@@ -927,12 +936,12 @@ class VVPBot:
                         if q["correct"]:
                             d = True
                             correct = q["number"]
-                        message += ("[x]" if d else "[ ]"), ANSWER + " %s: %s" % (q["number"], q["text"])
+                        message += ("`[x]`" if d else "`[ ]`") + ANSWER + " %s: %s" % (q["number"], q["text"]) + "\n"
                     message += "\n=============================="
                     if last_answer == correct:
                         corrects += 1
                     message += BOT_STATUS + (CORRECT if last_answer == correct else INCORRECT) + ", " + \
-                               str(corrects) + "/" + b["number"]
+                               str(corrects) + "/" + str(b["number"])
 
             elif msg.name == "disconnected":
                 print("disconnected")

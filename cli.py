@@ -36,6 +36,9 @@ else:
     config["Config"]["debug_mode"] = "disabled"
     config["Config"]["updates"] = "on"
     config["Config"]["answer_ui"] = "off"
+    config["Config"]["vvp_user_stats"] = "off"
+    config["Config"]["vvp_user_id"] = ""
+    config["Config"]["vvp_user_token"] = ""
     saveConfig()
 config.read("config.ak")
 proxies = {"http": "socks5h://" + config["Social"]["telegram_proxy"],"https": "socks5h://" + config["Social"]["telegram_proxy"]} if config["Social"]["telegram_proxy"] else {}

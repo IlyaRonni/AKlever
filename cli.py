@@ -436,8 +436,8 @@ def configurate():
                     if b == 0:
                         break
                     elif b == 1:
-                        print("1.", "[x]" if self.config["Config"]["vvp_user_stats"] == "on" else "[ ]", "Enable")
-                        print("2.", "[x]" if self.config["Config"]["vvp_user_stats"] == "off" else "[ ]", "Disable")
+                        print("1.", "[x]" if config["Config"]["vvp_user_stats"] == "on" else "[ ]", "Enable")
+                        print("2.", "[x]" if config["Config"]["vvp_user_stats"] == "off" else "[ ]", "Disable")
                         print("0. Back")
                         c = input("[0-2] > ")
                         while isInt(c) not in range(3):
@@ -447,10 +447,10 @@ def configurate():
                         if c == 0:
                             break
                         elif c == 1:
-                            self.config["Config"]["vvp_user_stats"] = "on"
+                            config["Config"]["vvp_user_stats"] = "on"
                             edited = True
                         elif c == 2:
-                            self.config["Config"]["vvp_user_stats"] = "off"
+                            config["Config"]["vvp_user_stats"] = "off"
                             edited = True
                     elif b == 2:
                         print("Token and ID is required")
@@ -465,10 +465,10 @@ def configurate():
                         if c == 0:
                             break
                         elif c == 1:
-                            self.config["Config"]["vvp_user_token"] = input("Enter your token\n > ")
+                            config["Config"]["vvp_user_token"] = input("Enter your token\n > ")
                             edited = True
                         elif c == 2:
-                            self.config["Config"]["vvp_user_id"] = input("Enter your id\n > ")
+                            config["Config"]["vvp_user_id"] = input("Enter your id\n > ")
                             edited = True
 
 class KleverAnswer:
@@ -691,7 +691,6 @@ class CleverBot(object):
     def __init__(self):
         super().__init__()
         self.corrects = 0
-        self.token = ""
         self.logfile = ""
         self.vid = ""
         self.longPollServer = ""
@@ -789,7 +788,7 @@ class CleverBot(object):
                 if not validateToken(arg.split("=")[1]):
                     print("Token is invalid!     ")
                     sys.exit()
-                self.token = arg.split("=")[1]
+                vk_token = arg.split("=")[1]
             elif "--custom" in arg:
                 try:
                     query = arg.split("=")[1]

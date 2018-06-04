@@ -64,6 +64,7 @@ except ImportError:
 
 
 def send_to_telegram(message):
+    message = message.replace("[", "`[", 1).replace("]", "]`", 1)
     try:
         requests.post(
             "https://api.telegram.org/bot" + config["Social"]["telegram_token"] + "/sendMessage",
@@ -910,11 +911,11 @@ class CleverBot(object):
         message = QUESTION % (str(question.id), question.question)
         message += "\n==============================\n"
         for i in range(len(question.answers)):
-            sign = "`[ ]`"
+            sign = "[ ]"
             if i == int(question.best[0]) - 1:
-                sign = "`[~]`"
+                sign = "[~]"
             if i == correct:
-                sign = "`[x]`"
+                sign = "[x]"
             message += "\n" + sign + " "+ANSWER+" " + str(i + 1) + ": " + str(question.answers[i])
         message += "\n\n==============================\n"
         if correct != -1:
@@ -1051,7 +1052,7 @@ class VVPBot:
                         if q["correct"]:
                             d = True
                             correct = q["number"]
-                        message += ("`[x]`" if d else "`[ ]`") + ANSWER + " %s: %s" % (q["number"], q["text"]) + "\n"
+                        message += ("[x]" if d else "[ ]") + ANSWER + " %s: %s" % (q["number"], q["text"]) + "\n"
                     message += "\n=============================="
                     if last_answer == correct:
                         corrects += 1

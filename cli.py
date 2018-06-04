@@ -64,7 +64,7 @@ except ImportError:
 
 
 def send_to_telegram(message):
-    message = message.replace("[", "`[", 1).replace("]", "]`", 1)
+    message = message.replace("[", "`[").replace("]", "]`")
     try:
         requests.post(
             "https://api.telegram.org/bot" + config["Social"]["telegram_token"] + "/sendMessage",

@@ -5,9 +5,13 @@
 ```bash
 git clone https://github.com/TaizoGem/AKlever.git && cd AKlever
 ```
-2. Run cli.py:
+2.1. Run cli.py in Windows (Python 3):
 ```bash
 python cli.py
+```
+2.2. Run cli.py in Linux
+```bash
+python3 cli.py
 ```
 
 ## Usage

@@ -996,18 +996,11 @@ class CleverBot(object):
 
 class VVPBot:
     SERVERS = (
-        "ws://ws-tosno1.trivia.incrdbl.me:8888/socket",
-        "ws://ws-tosno2.trivia.incrdbl.me:8888/socket",
-        "ws://ws-tosno3.trivia.incrdbl.me:8888/socket",
-        "ws://ws-tosno4.trivia.incrdbl.me:8888/socket",
-        "ws://ws-tosno5.trivia.incrdbl.me:8888/socket",
-        "ws://ws-tosno6.trivia.incrdbl.me:8888/socket",
-        "ws://ws-luga1.trivia.incrdbl.me:8888/socket",
-        "ws://ws-luga2.trivia.incrdbl.me:8888/socket",
-        "ws://ws-luga3.trivia.incrdbl.me:8888/socket",
-        "ws://ws-luga4.trivia.incrdbl.me:8888/socket",
-        "ws://ws-luga5.trivia.incrdbl.me:8888/socket",
-        "ws://ws-luga6.trivia.incrdbl.me:8888/socket"
+      "ws://ws-luga1.trivia.incrdbl.me:8888/guest",
+      "ws://ws-luga2.trivia.incrdbl.me:8888/guest",
+      "ws://ws-luga4.trivia.incrdbl.me:8888/guest",
+      "ws://ws-luga5.trivia.incrdbl.me:8888/guest",
+      "ws://ws-luga6.trivia.incrdbl.me:8888/guest"
     )
 
     def mainloop(self):
